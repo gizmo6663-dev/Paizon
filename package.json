@@ -1,0 +1,11 @@
+{
+  "name": "paizon",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pedagogiske spill for barn – første spill: Stave ord",
+  "scripts": {
+    "start": "npx --yes http-server -c-1 -p 8080 .",
+    "test": "node --test \"tests/**/*.test.js\""
+  },
+  "license": "UNLICENSED"
+}

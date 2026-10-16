@@ -1,0 +1,16 @@
+{
+  "name": "Paizon – lærerike spill for barn",
+  "short_name": "Paizon",
+  "description": "Pedagogiske spill for barn. Første spill: Stave ord.",
+  "lang": "nb",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fdf6ff",
+  "theme_color": "#6c5ce7",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
