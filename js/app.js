@@ -606,7 +606,7 @@
     holdTimer = setTimeout(() => {
       exitBtn.classList.remove('holding');
       holdTimer = null;
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      Speech.stop();
       show('setup');
     }, HOLD_MS);
   });
@@ -649,7 +649,26 @@
   // ---------- Oppstart ----------
   show('home');
 
-  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  // Android-appen: maskinvarens tilbake-knapp går ett steg tilbake i stedet for å lukke appen.
+  // I spillet må 🏠 holdes inne, så barnet ikke avslutter ved et uhell.
+  const Cap = window.Capacitor;
+  const isNative = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
+  if (isNative) {
+    const NativeApp = Cap.registerPlugin('App');
+    NativeApp.addListener('backButton', () => {
+      const screen = document.body.dataset.screen;
+      if (screen === 'game') {
+        toast('Hold inne 🏠 for å avslutte');
+      } else if (screen === 'home') {
+        NativeApp.exitApp();
+      } else {
+        show('home');
+      }
+    });
+    NativeApp.addListener('pause', () => Speech.stop());
+  }
+
+  if (!isNative && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
   }
 })();

@@ -36,7 +36,32 @@ npm test       # kjører enhetstester for spill-logikken
 
 `index.html` kan også åpnes direkte i nettleseren, men offline-støtte krever at appen serveres over http(s).
 
-## Publisere
+## Android-app (APK)
+
+Appen pakkes som Android-app med [Capacitor](https://capacitorjs.com/). Nettappen kopieres til `www/`
+og legges inn i det native prosjektet i `android/`.
+
+**Enklest – last ned fra GitHub:** Arbeidsflyten *Bygg Android-APK* bygger en APK ved hver push og
+pull request. Åpne kjøringen under *Actions* og last ned artefakten `paizon-apk`.
+Lager du en tag som `v1.0.0`, legges APK-en også ved en GitHub-release.
+Installer filen på telefonen/nettbrettet (tillat «installer ukjente apper» for nettleseren eller filbehandleren).
+
+**Bygge selv** (krever Node 22, JDK 21 og Android SDK, f.eks. via Android Studio):
+
+```bash
+npm install
+npm run android:apk    # → android/app/build/outputs/apk/debug/app-debug.apk
+npm run android:open   # åpner prosjektet i Android Studio
+```
+
+I appen brukes enhetens innebygde talemotor til opplesning, og tilbake-knappen går tilbake til
+forrige skjerm (i spillet må 🏠 fortsatt holdes inne). Velg gjerne norsk stemme under
+*Innstillinger → Tekst til tale* på enheten.
+
+APK-en er signert med en debug-nøkkel og egner seg for egen bruk. For Google Play trengs en egen
+opplastingsnøkkel og `assembleRelease`/`bundleRelease`.
+
+## Publisere på nett
 
 Repoet inneholder en GitHub Actions-arbeidsflyt som publiserer appen til GitHub Pages.
 Slå på Pages under *Settings → Pages → Source: GitHub Actions*.
@@ -50,6 +75,10 @@ js/logic.js         Ren spill-logikk (testes med node --test)
 js/media.js         Lyd, opplesning og konfetti
 js/app.js           Skjermstyring og «Stave ord»-spillet
 sw.js               Service worker for offline-bruk
+scripts/build-web.mjs  Kopierer nettappen til www/ (brukes av Capacitor og Pages)
+capacitor.config.json  Oppsett for Android-appen
+android/            Native Android-prosjekt (Capacitor)
+assets/             Kildebilder for app-ikon og oppstartsbilde
 ```
 
 Nye spill legges til som et nytt kort på forsiden og en egen skjerm.

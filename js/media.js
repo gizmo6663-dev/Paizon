@@ -45,12 +45,18 @@
     setMuted(value) {
       muted = !!value;
       try { localStorage.setItem('paizon.muted', String(muted)); } catch (e) { /* ignorer */ }
-      if (muted && window.speechSynthesis) window.speechSynthesis.cancel();
+      if (muted) window.PaizonSpeech.stop();
     },
   };
 
   // ---------- Opplesning ----------
-  const synth = window.speechSynthesis;
+  // I Android-appen brukes enhetens talemotor via Capacitor-plugin,
+  // siden Android WebView ikke har window.speechSynthesis.
+  const Cap = window.Capacitor;
+  const nativeTts = Cap && Cap.isNativePlatform && Cap.isNativePlatform()
+    ? Cap.registerPlugin('TextToSpeech')
+    : null;
+  const synth = nativeTts ? null : window.speechSynthesis;
   let voice = null;
 
   function pickVoice() {
@@ -66,9 +72,23 @@
   }
 
   window.PaizonSpeech = {
-    available: !!synth,
+    available: !!(synth || nativeTts),
     speak(text, rate) {
-      if (!synth || muted || !text) return;
+      if (muted || !text) return;
+      if (nativeTts) {
+        nativeTts.stop()
+          .catch(() => {})
+          .then(() => nativeTts.speak({
+            text: String(text).toLocaleLowerCase('nb-NO'),
+            lang: 'nb-NO',
+            rate: rate || 0.85,
+            pitch: 1.1,
+            volume: 1,
+          }))
+          .catch(() => {});
+        return;
+      }
+      if (!synth) return;
       synth.cancel();
       const u = new SpeechSynthesisUtterance(String(text).toLocaleLowerCase('nb-NO'));
       u.lang = voice ? voice.lang : 'nb-NO';
@@ -76,6 +96,10 @@
       u.rate = rate || 0.85;
       u.pitch = 1.1;
       synth.speak(u);
+    },
+    stop() {
+      if (nativeTts) nativeTts.stop().catch(() => {});
+      else if (synth) synth.cancel();
     },
   };
 
