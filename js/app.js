@@ -651,11 +651,15 @@
 
   // Android-appen: maskinvarens tilbake-knapp går ett steg tilbake i stedet for å lukke appen.
   // I spillet må 🏠 holdes inne, så barnet ikke avslutter ved et uhell.
-  const Cap = window.Capacitor;
-  const isNative = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
-  if (isNative) {
-    const NativeApp = Cap.registerPlugin('App');
-    NativeApp.addListener('backButton', () => {
+  const NativeApp = window.PaizonNativePlugin('App');
+  const isNative = !!NativeApp;
+  const listen = (event, handler) => {
+    try {
+      Promise.resolve(NativeApp.addListener(event, handler)).catch(() => {});
+    } catch (e) { /* tilbake-knappen virker da som vanlig */ }
+  };
+  if (NativeApp) {
+    listen('backButton', () => {
       const screen = document.body.dataset.screen;
       if (screen === 'game') {
         toast('Hold inne 🏠 for å avslutte');
@@ -665,7 +669,7 @@
         show('home');
       }
     });
-    NativeApp.addListener('pause', () => Speech.stop());
+    listen('pause', () => Speech.stop());
   }
 
   if (!isNative && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {

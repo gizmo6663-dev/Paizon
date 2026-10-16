@@ -2,6 +2,21 @@
 (function () {
   'use strict';
 
+  /**
+   * Henter en Capacitor-plugin når appen kjører som Android-app, ellers null.
+   * Feiler aldri: mangler Capacitor-runtime eller plugin, brukes nettleserens funksjoner.
+   */
+  window.PaizonNativePlugin = function (name) {
+    try {
+      const Cap = window.Capacitor;
+      if (!Cap || typeof Cap.isNativePlatform !== 'function' || !Cap.isNativePlatform()) return null;
+      if (typeof Cap.registerPlugin === 'function') return Cap.registerPlugin(name);
+      return (Cap.Plugins && Cap.Plugins[name]) || null;
+    } catch (e) {
+      return null;
+    }
+  };
+
   // ---------- Lydeffekter ----------
   let ctx = null;
   let muted = false;
@@ -52,10 +67,7 @@
   // ---------- Opplesning ----------
   // I Android-appen brukes enhetens talemotor via Capacitor-plugin,
   // siden Android WebView ikke har window.speechSynthesis.
-  const Cap = window.Capacitor;
-  const nativeTts = Cap && Cap.isNativePlatform && Cap.isNativePlatform()
-    ? Cap.registerPlugin('TextToSpeech')
-    : null;
+  const nativeTts = window.PaizonNativePlugin('TextToSpeech');
   const synth = nativeTts ? null : window.speechSynthesis;
   let voice = null;
 
