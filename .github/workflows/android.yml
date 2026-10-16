@@ -28,6 +28,9 @@ jobs:
           cache: gradle
 
       - uses: android-actions/setup-android@v3
+        with:
+          # Standardverdien («tools») finnes ikke lenger i sdkmanager.
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
       - name: Installer avhengigheter
         run: npm ci
