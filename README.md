@@ -36,7 +36,7 @@ Appen sier for eksempel «Finn den røde sirkelen» eller «Finn det gule hjerte
 former eller begge. Trykker barnet feil, forteller appen hva det trykket på («Det er en blå trekant»).
 
 ### 🧱 Byggeklosser
-Fysikk med [Matter.js](https://brm.io/matter-js/): dra klosser, planker, søyler, trekanter og baller inn fra
+Fysikk med [Matter.js](https://brm.io/matter-js/): dra store klosser, planker, søyler, trekanter og baller inn fra
 kassen nederst, flytt dem med fingeren og vri dem med ⟲ ⟳. Dra en kloss til 🗑️ for å fjerne den.
 - **Fri bygging** – bygg hva du vil, og test byggverket med 🌋 jordskjelv.
 - **Høyt tårn** – bygg opp til streken og få tårnet til å stå stødig i to sekunder (3 nivåer).
@@ -44,9 +44,16 @@ kassen nederst, flytt dem med fingeren og vri dem med ⟲ ⟳. Dra en kloss til 
   Nivå 3 krever en søyle i kløften.
 
 ### 💧 Væskelek
-En ren væskesimulator (partikkelbasert, egen kode i `js/fluid.js`). Rør med fingeren, hell inn maling,
-tørk opp med svampen, og bytt mellom vann, olje og honning. Fargene blandes som maling – blå og gul blir
-grønn. Tyngdekraften kan peke ned, være av (vektløst) eller styres ved å **vippe telefonen**.
+En ren væskesimulator (partikkelbasert, egen kode i `js/fluid.js`). Rør med fingeren, hell inn væske og
+tørk opp med svampen.
+- **Vann, olje og honning** kan være i karet samtidig. Olje og vann blander seg ikke, og olje flyter
+  opp. Honning er tyngst og veldig seig: den renner i en tykk tråd og bygger hauger som siger sakte ut.
+- **Fargene på vann** blandes som maling – blå og gul blir grønn.
+- **Kraner** sitter på veggene eller i taket og dras dit man vil. Trykk på en kran for å skru den av og
+  på, og juster strålen med glidebryteren. Kranene renner med valgt væske og farge.
+- **Skål, halvmåne, planke og kloss** leder væsken. De flyttes fritt og vris med ↻-håndtaket.
+- **Sluk** fjerner væsken som renner ned i det, så kranene kan renne i det uendelige.
+- Tyngdekraften kan peke ned, være av (vektløst) eller styres ved å **vippe telefonen**.
 
 ### Felles
 - Lyd kan slås av, og alt leses opp med norsk talesyntese når enheten har det

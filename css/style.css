@@ -680,7 +680,28 @@ summary { cursor: pointer; font-weight: 800; padding: 10px 0; list-style-positio
 
 /* ---------- Væskelek ---------- */
 .liquid-world { background: linear-gradient(180deg, #f7fbff, #e3f1ff); }
-.liquid-world canvas { filter: url(#goo); }
+.liquid-world #liquid-canvas { filter: url(#goo); }
+.liquid-world #liquid-objects { z-index: 1; }
+.liquid-context {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: calc(100% - 20px);
+  padding: 8px 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: var(--shadow);
+}
+.liquid-context strong { font-weight: 900; }
+.strength { display: flex; align-items: center; gap: 6px; }
+.strength input { width: min(180px, 40vw); accent-color: var(--primary); }
 .liquid-toolbar {
   flex: none;
   display: flex;
@@ -751,7 +772,8 @@ summary { cursor: pointer; font-weight: 800; padding: 10px 0; list-style-positio
 :focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
 
 @media (max-width: 700px) {
-  .liquid-toolbar { flex-wrap: wrap; justify-content: center; overflow: visible; }
+  .liquid-toolbar { gap: 6px; }
+  .tool-group button span { display: none; }
   .tool-group button { min-width: 46px; height: 46px; }
   .build-bar { flex-wrap: wrap; justify-content: center; }
 }

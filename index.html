@@ -380,10 +380,23 @@
           <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
           <span aria-hidden="true">🏠</span>
         </button>
-        <p class="prompt small">Bland blå og gul – hva skjer? 💧</p>
+        <p class="prompt small">Bland farger, hell olje i vannet, eller bygg med kraner og skåler 💧</p>
         <span class="icon-spacer" aria-hidden="true"></span>
       </div>
-      <div id="liquid-world" class="sim-world liquid-world"><canvas id="liquid-canvas"></canvas></div>
+      <div id="liquid-world" class="sim-world liquid-world">
+        <canvas id="liquid-canvas"></canvas>
+        <canvas id="liquid-objects" aria-label="Væske – rør, hell eller flytt tingene"></canvas>
+        <div id="liquid-context" class="liquid-context" hidden>
+          <strong id="liquid-context-name">Kran</strong>
+          <label id="liquid-strength-row" class="strength">
+            <span aria-hidden="true">💧</span>
+            <input id="liquid-strength" type="range" min="0" max="100" step="5" aria-label="Strålestyrke">
+            <span aria-hidden="true">🌊</span>
+          </label>
+          <button id="liquid-toggle" class="btn small">⏸️ Skru av</button>
+          <button id="liquid-remove" class="btn small ghost">🗑️ Fjern</button>
+        </div>
+      </div>
       <div id="liquid-toolbar" class="liquid-toolbar" role="toolbar" aria-label="Verktøy">
         <div class="tool-group" aria-label="Verktøy">
           <button data-set="tool:stir" title="Rør">✋<span>Rør</span></button>
@@ -400,6 +413,14 @@
           <button data-set="liquid:vann">💧<span>Vann</span></button>
           <button data-set="liquid:olje">🫒<span>Olje</span></button>
           <button data-set="liquid:honning">🍯<span>Honning</span></button>
+        </div>
+        <div class="tool-group" aria-label="Legg til">
+          <button data-add="kran" title="Kran">🚰<span>Kran</span></button>
+          <button data-add="skal" title="Skål">🥣<span>Skål</span></button>
+          <button data-add="halvmane" title="Halvmåne">🌙<span>Halvmåne</span></button>
+          <button data-add="planke" title="Planke">➖<span>Planke</span></button>
+          <button data-add="kloss" title="Kloss">🟥<span>Kloss</span></button>
+          <button data-add="sluk" title="Sluk">🕳️<span>Sluk</span></button>
         </div>
         <div class="tool-group" aria-label="Tyngdekraft">
           <button data-set="gravity:ned">⬇️<span>Ned</span></button>
