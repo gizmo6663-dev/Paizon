@@ -13,20 +13,22 @@
   // Klossene i verktøykassen. Størrelser er i «enheter» (u), som skaleres etter skjermen.
   const BLOCKS = [
     { key: 'kloss', label: 'Kloss', w: 1, h: 1, color: '#ff7675' },
-    { key: 'planke', label: 'Planke', w: 3, h: 0.3, color: '#e1a14b' },
-    { key: 'lang', label: 'Lang planke', w: 5, h: 0.3, color: '#c97f2e' },
-    { key: 'soyle', label: 'Søyle', w: 0.6, h: 2.2, color: '#74b9ff' },
+    { key: 'planke', label: 'Planke', w: 2.5, h: 0.2, color: '#e1a14b' },
+    { key: 'lang', label: 'Lang planke', w: 4, h: 0.2, color: '#c97f2e' },
+    { key: 'soyle', label: 'Søyle', w: 0.5, h: 1.6, color: '#74b9ff' },
     { key: 'trekant', label: 'Trekant', sides: 3, r: 0.75, color: '#55efc4' },
     { key: 'ball', label: 'Ball', circle: 0.5, color: '#fdcb6e' },
   ];
 
   // Utfordringer: høyde i u for tårn, bredde på kløften i u for bro.
   const LEVELS = {
-    tarn: [{ height: 4 }, { height: 6 }, { height: 8 }],
-    bro: [{ gap: 2.2 }, { gap: 4 }, { gap: 7 }], // planke (3u) rekker over nivå 1, lang planke (5u) nivå 2, nivå 3 trenger søyler
+    tarn: [{ height: 2.5 }, { height: 3.5 }, { height: 4.5 }],
+    // Planke (2,5u) rekker over nivå 1, lang planke (4u) nivå 2. Nivå 3 trenger en søyle:
+    // klippene er 2u høye, altså nøyaktig to klosser.
+    bro: [{ gap: 1.5 }, { gap: 3 }, { gap: 4.4 }],
   };
 
-  const BALL_SPIN = 0.11; // radianer per steg ≈ 0,08 u per steg
+  const BALL_SPIN = 0.1; // radianer per steg ≈ 0,04 u per steg med radius 0,4u
 
   const canvas = $('#build-canvas');
   const ctx = canvas.getContext('2d');
@@ -65,10 +67,11 @@
     canvas.style.width = W + 'px';
     canvas.style.height = H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    u = Math.max(28, Math.min(64, Math.min(W / 16, H / 11)));
+    // Store klosser er lettere å treffe for små fingre: skjermen er ca. 8 × 5,5 enheter.
+    u = Math.max(40, Math.min(130, Math.min(W / 8, H / 5.5)));
   }
 
-  const groundTop = () => H - u * 0.9;
+  const groundTop = () => H - u * 0.45;
 
   function makeBlock(def, x, y) {
     const common = { friction: 0.8, frictionStatic: 1.2, restitution: 0.05, density: 0.002, slop: 0.02 };
@@ -105,8 +108,8 @@
     addStatic(Bodies.rectangle(W / 2, -thick / 2, W * 2, thick), { hidden: true }); // tak
 
     if (mode === 'bro') {
-      const gap = Math.min(LEVELS.bro[level].gap * u, W * 0.5);
-      const cliffTop = gt - u * 4;
+      const gap = Math.min(LEVELS.bro[level].gap * u, W * 0.55);
+      const cliffTop = gt - u * 2;
       const gapStart = W * 0.45 - gap / 2;
       const gapEnd = gapStart + gap;
       const rect = (x0, x1, top) => Bodies.rectangle((x0 + x1) / 2, (top + gt + thick) / 2, x1 - x0, gt + thick - top, { friction: 0.9 });
@@ -114,9 +117,9 @@
       addStatic(rect(0, gapStart, cliffTop), { kind: 'cliff' });
       addStatic(rect(gapEnd, W, cliffTop), { kind: 'cliff' });
       // Rampe på venstre side gir kula fart.
-      const rampW = Math.min(gapStart * 0.6, u * 4);
+      const rampW = Math.min(gapStart * 0.6, u * 2);
       const ramp = Bodies.fromVertices(0, 0, [[
-        { x: 0, y: -u * 2.4 }, { x: rampW, y: 0 }, { x: 0, y: 0 },
+        { x: 0, y: -u * 1.2 }, { x: rampW, y: 0 }, { x: 0, y: 0 },
       ]], { friction: 0.05 });
       // Flytt rampen så den står på klippen helt til venstre.
       Body.setPosition(ramp, { x: ramp.position.x - ramp.bounds.min.x, y: ramp.position.y + (cliffTop - ramp.bounds.max.y) });
@@ -124,8 +127,8 @@
       terrain = {
         cliffTop, gapStart, gapEnd,
         flagX: gapEnd + (W - gapEnd) * 0.5,
-        startX: u * 0.9,
-        startY: cliffTop - u * 3.4,
+        startX: u * 0.45,
+        startY: cliffTop - u * 1.7,
       };
     } else {
       addStatic(Bodies.rectangle(W / 2, gt + thick / 2, W * 2, thick, { friction: 1 }), { kind: 'ground' });
@@ -140,7 +143,7 @@
     if (mode !== 'bro') return;
     // Kula har en liten «motor» (se loop) og godt grep, så den triller jevnt og klatrer
     // over plankekanter. Mange sider gjør den rund nok til å rulle uten å hakke.
-    ball = Bodies.circle(terrain.startX, terrain.startY, u * 0.7, { friction: 0.9, frictionStatic: 1, frictionAir: 0.002, restitution: 0.05, density: 0.004, sleepThreshold: Infinity }, 64);
+    ball = Bodies.circle(terrain.startX, terrain.startY, u * 0.4, { friction: 0.9, frictionStatic: 1, frictionAir: 0.002, restitution: 0.05, density: 0.004, sleepThreshold: Infinity }, 64);
     Body.setStatic(ball, true);
     ball.paizon = { color: '#e84393', kind: 'ball' };
     Composite.add(world, ball);
@@ -150,6 +153,8 @@
   function newWorld() {
     engine = Engine.create({ enableSleeping: true, positionIterations: 10, velocityIterations: 8 });
     engine.gravity.y = 1;
+    // Tyngdekraften skaleres med klossene, så store klosser ikke ser ut til å sveve.
+    engine.gravity.scale = 0.001 * (u / 50);
     world = engine.world;
     blocks = [];
     selected = null;
@@ -242,7 +247,7 @@
     const ground = statics.find((s) => s.paizon && s.paizon.kind === 'ground');
     if (!ground) return;
     const k = (t - shakeStart) / 1000;
-    const amp = u * 0.25 * Math.min(1, (shakeUntil - t) / 600);
+    const amp = u * 0.15 * Math.min(1, (shakeUntil - t) / 600);
     const x = W / 2 + Math.sin(k * 28) * amp;
     Body.setVelocity(ground, { x: x - ground.position.x, y: 0 });
     Body.setPosition(ground, { x, y: ground.position.y });
@@ -278,7 +283,7 @@
     } else if (mode === 'bro' && ball && ballState === 'rolling') {
       if (ball.position.x > terrain.flagX - u * 0.3 && ball.position.y < terrain.cliffTop + u * 0.2) {
         succeed('Kula kom over! 🌉');
-      } else if (ball.position.y > terrain.cliffTop + u * 1.5 || stuck(t)) {
+      } else if (ball.position.y > terrain.cliffTop + u * 1.0 || stuck(t)) {
         ballState = 'failed';
         goalEl.textContent = 'Å nei! Bygg litt mer, og prøv igjen.';
         Sound.wrong();
@@ -525,8 +530,8 @@
       ctx.lineTo(W, terrain.goalY);
       ctx.stroke();
       ctx.restore();
-      ctx.font = `${Math.round(u * 0.7)}px system-ui, sans-serif`;
-      ctx.fillText('⭐', W - u * 1.1, terrain.goalY - u * 0.2);
+      ctx.font = `${Math.round(u * 0.45)}px system-ui, sans-serif`;
+      ctx.fillText('⭐', W - u * 0.7, terrain.goalY - u * 0.1);
     }
 
     for (const s of statics) {
@@ -541,13 +546,13 @@
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(fx, fy);
-      ctx.lineTo(fx, fy - u * 1.8);
+      ctx.lineTo(fx, fy - u * 1.1);
       ctx.stroke();
       ctx.fillStyle = '#e84393';
       ctx.beginPath();
-      ctx.moveTo(fx, fy - u * 1.8);
-      ctx.lineTo(fx + u * 0.9, fy - u * 1.5);
-      ctx.lineTo(fx, fy - u * 1.2);
+      ctx.moveTo(fx, fy - u * 1.1);
+      ctx.lineTo(fx + u * 0.6, fy - u * 0.9);
+      ctx.lineTo(fx, fy - u * 0.7);
       ctx.fill();
     }
 
