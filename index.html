@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#6c5ce7">
-  <meta name="description" content="Paizon – lærerike spill for barn. Første spill: Stave ord.">
+  <meta name="description" content="Paizon – lærerike spill for barn: stave ord, telle, memory, farger og former, byggeklosser, væskelek, domino og kulebane.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Paizon">
@@ -33,36 +33,55 @@
     <section id="screen-home" class="screen active" aria-labelledby="home-title">
       <h1 id="home-title" class="title">Hei! Hva vil du spille?</h1>
       <div class="game-grid">
-        <button class="game-card" data-go="setup" style="--card: #6c5ce7">
+        <button class="game-card" data-go="spell-setup" style="--card: #6c5ce7">
           <span class="game-emoji" aria-hidden="true">🔤</span>
           <span class="game-name">Stave ord</span>
-          <span class="game-desc">Sett bokstavene på riktig plass</span>
+          <span class="game-desc">Dra bokstavene på riktig plass</span>
         </button>
-        <div class="game-card soon" style="--card: #00b894" aria-disabled="true">
+        <button class="game-card" data-go="count-setup" style="--card: #00b894">
           <span class="game-emoji" aria-hidden="true">🔢</span>
           <span class="game-name">Telle</span>
-          <span class="game-desc">Kommer snart</span>
-        </div>
-        <div class="game-card soon" style="--card: #e17055" aria-disabled="true">
+          <span class="game-desc">Tell tingene og finn tallet</span>
+        </button>
+        <button class="game-card" data-go="memory-setup" style="--card: #e17055">
           <span class="game-emoji" aria-hidden="true">🧩</span>
           <span class="game-name">Memory</span>
-          <span class="game-desc">Kommer snart</span>
-        </div>
-        <div class="game-card soon" style="--card: #0984e3" aria-disabled="true">
+          <span class="game-desc">Finn like par</span>
+        </button>
+        <button class="game-card" data-go="shapes-setup" style="--card: #0984e3">
           <span class="game-emoji" aria-hidden="true">🎨</span>
           <span class="game-name">Farger og former</span>
-          <span class="game-desc">Kommer snart</span>
-        </div>
+          <span class="game-desc">Finn riktig farge og form</span>
+        </button>
+        <button class="game-card" data-go="build-setup" style="--card: #d35400">
+          <span class="game-emoji" aria-hidden="true">🧱</span>
+          <span class="game-name">Byggeklosser</span>
+          <span class="game-desc">Bygg tårn og broer med ekte fysikk</span>
+        </button>
+        <button class="game-card" data-start="liquid" style="--card: #0097a7">
+          <span class="game-emoji" aria-hidden="true">💧</span>
+          <span class="game-name">Væskelek</span>
+          <span class="game-desc">Rør, hell og bland farger</span>
+        </button>
+        <button class="game-card" data-go="domino-setup" style="--card: #c0392b">
+          <span class="game-emoji" aria-hidden="true">🁢</span>
+          <span class="game-name">Domino</span>
+          <span class="game-desc">Sett opp brikker og se dem velte</span>
+        </button>
+        <button class="game-card" data-go="marble-setup" style="--card: #8e44ad">
+          <span class="game-emoji" aria-hidden="true">🎱</span>
+          <span class="game-name">Kulebane</span>
+          <span class="game-desc">Bygg en bane for kula</span>
+        </button>
       </div>
-      <p class="stats" id="stats"></p>
     </section>
 
-    <!-- ===================== OPPSETT ===================== -->
-    <section id="screen-setup" class="screen" aria-labelledby="setup-title">
+    <!-- ===================== STAVE ORD: OPPSETT ===================== -->
+    <section id="screen-spell-setup" class="screen" aria-labelledby="spell-setup-title">
       <div class="panel">
         <div class="panel-head">
           <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
-          <h2 id="setup-title">🔤 Stave ord</h2>
+          <h2 id="spell-setup-title">🔤 Stave ord</h2>
         </div>
         <p class="muted">For voksne: skriv inn ordene barnet skal stave, velg vanskelighetsgrad og trykk start.</p>
 
@@ -129,70 +148,454 @@
               <span>Barnets navn (til ros)</span>
               <input id="opt-name" type="text" maxlength="20" placeholder="Valgfritt">
             </label>
-            <label class="adv-check"><input type="checkbox" id="opt-shuffle"> Bland rekkefølgen på ordene</label>
+            <label class="adv-check"><input type="checkbox" id="opt-letter-sound"> Si bokstavlyden når en bokstav plukkes opp</label>
+            <label class="adv-check"><input type="checkbox" id="opt-spell-out"> Stav ordet høyt med bokstavlyder når det er ferdig</label>
             <label class="adv-check"><input type="checkbox" id="opt-speak-word"> Les opp ordet når det starter</label>
-            <label class="adv-check"><input type="checkbox" id="opt-speak-letter"> Si bokstaven når den settes på plass</label>
+            <label class="adv-check"><input type="checkbox" id="opt-shuffle"> Bland rekkefølgen på ordene</label>
             <label class="adv-check"><input type="checkbox" id="opt-picture"> Vis bilde av ordet når det finnes</label>
           </div>
         </details>
 
-        <button id="start-btn" class="btn primary big" disabled>Start ▶</button>
+        <details class="advanced" id="letter-sounds">
+          <summary>🔈 Bokstavlyder</summary>
+          <p class="field-help">Trykk på en bokstav for å høre lyden.
+            <span class="rec-help">Hold inne 🎙️ for å spille inn din egen stemme (f.eks. «t», ikke «te»). ↺ går tilbake til standardlyden.</span></p>
+          <div id="letter-grid" class="letter-grid"></div>
+        </details>
+
+        <button id="spell-start" class="btn primary big" disabled>Start ▶</button>
       </div>
     </section>
 
-    <!-- ===================== SPILL ===================== -->
-    <section id="screen-game" class="screen" aria-label="Stave ord">
+    <!-- ===================== STAVE ORD: SPILL ===================== -->
+    <section id="screen-spell" class="screen game-screen" aria-label="Stave ord">
       <div class="game-top">
-        <button id="exit-btn" class="icon-btn hold-btn" aria-label="Hold inne for å avslutte">
+        <button class="icon-btn hold-btn" data-exit="spell-setup" aria-label="Hold inne for å avslutte">
           <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
           <span aria-hidden="true">🏠</span>
         </button>
-        <div id="progress" class="progress" aria-label="Fremdrift"></div>
+        <div id="spell-progress" class="progress" aria-label="Fremdrift"></div>
         <div class="game-actions">
-          <button id="speak-btn" class="icon-btn" aria-label="Les opp ordet" title="Les opp ordet">🗣️</button>
-          <button id="hint-btn" class="icon-btn" aria-label="Hint" title="Hint">💡</button>
+          <button id="spell-speak" class="icon-btn" aria-label="Les opp ordet" title="Les opp ordet">🗣️</button>
+          <button id="spell-hint" class="icon-btn" aria-label="Hint" title="Hint">💡</button>
         </div>
       </div>
 
       <div class="play-area">
-        <div id="picture" class="picture" aria-hidden="true"></div>
+        <div id="spell-picture" class="picture" aria-hidden="true"></div>
         <div id="slots" class="slots" role="group" aria-label="Bokser for bokstaver"></div>
-        <p id="feedback" class="feedback" aria-live="polite"></p>
-        <div id="bank" class="bank" role="group" aria-label="Bokstaver"></div>
+        <p id="spell-feedback" class="feedback" aria-live="polite"></p>
+        <div id="bank" class="bank" role="group" aria-label="Bokstaver – dra dem til boksene"></div>
       </div>
 
       <div id="word-done" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="done-word">
         <div class="overlay-card">
           <div id="done-picture" class="done-picture" aria-hidden="true"></div>
           <div id="done-word" class="done-word"></div>
-          <div id="done-stars" class="done-stars" aria-label=""></div>
           <p id="done-praise" class="done-praise"></p>
-          <button id="next-btn" class="btn primary big">Neste ord ➜</button>
+          <div class="overlay-actions">
+            <button id="done-replay" class="btn">🔁 Hør igjen</button>
+            <button id="next-btn" class="btn primary">Neste ord ➜</button>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- ===================== RESULTAT ===================== -->
-    <section id="screen-result" class="screen" aria-labelledby="result-title">
+    <!-- ===================== TELLE: OPPSETT ===================== -->
+    <section id="screen-count-setup" class="screen" aria-labelledby="count-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="count-setup-title">🔢 Telle</h2>
+        </div>
+        <p class="muted">Barnet trykker på tingene for å telle dem høyt, og velger så riktig tall.</p>
+        <p class="field-label">Tall opp til</p>
+        <div class="choice-row" data-game="count" data-key="max">
+          <button data-value="5">5</button><button data-value="10">10</button><button data-value="20">20</button>
+        </div>
+        <p class="field-label">Antall oppgaver</p>
+        <div class="choice-row" data-game="count" data-key="rounds">
+          <button data-value="5">5</button><button data-value="10">10</button><button data-value="15">15</button>
+        </div>
+        <button class="btn primary big" data-start="count">Start ▶</button>
+      </div>
+    </section>
+
+    <!-- ===================== TELLE: SPILL ===================== -->
+    <section id="screen-count" class="screen game-screen" aria-label="Telle">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="count-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <div id="count-progress" class="progress" aria-label="Fremdrift"></div>
+        <div class="game-actions">
+          <button id="count-help" class="icon-btn" aria-label="Tell sammen med meg" title="Tell sammen">💡</button>
+        </div>
+      </div>
+      <div class="play-area">
+        <p class="prompt">Hvor mange er det?</p>
+        <div id="count-items" class="count-items" role="group" aria-label="Trykk for å telle"></div>
+        <p id="count-feedback" class="feedback" aria-live="polite"></p>
+        <div id="count-options" class="number-options" role="group" aria-label="Velg tall"></div>
+      </div>
+    </section>
+
+    <!-- ===================== MEMORY: OPPSETT ===================== -->
+    <section id="screen-memory-setup" class="screen" aria-labelledby="memory-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="memory-setup-title">🧩 Memory</h2>
+        </div>
+        <p class="muted">Snu to kort om gangen og finn like par.</p>
+        <p class="field-label">Antall par</p>
+        <div class="choice-row" data-game="memory" data-key="pairs">
+          <button data-value="3">3</button><button data-value="6">6</button><button data-value="8">8</button><button data-value="10">10</button>
+        </div>
+        <p class="field-label">Tema</p>
+        <div class="choice-row" data-game="memory" data-key="theme" id="memory-themes"></div>
+        <div class="adv-grid spaced">
+          <label class="adv-check"><input type="checkbox" data-game="memory" data-key="showWord"> Vis ordet under bildet</label>
+          <label class="adv-check"><input type="checkbox" data-game="memory" data-key="speak"> Si navnet når et kort snus</label>
+        </div>
+        <button class="btn primary big" data-start="memory">Start ▶</button>
+      </div>
+    </section>
+
+    <!-- ===================== MEMORY: SPILL ===================== -->
+    <section id="screen-memory" class="screen game-screen" aria-label="Memory">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="memory-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <p id="memory-status" class="prompt small" aria-live="polite"></p>
+        <span class="icon-spacer" aria-hidden="true"></span>
+      </div>
+      <div id="memory-board" class="memory-board" role="group" aria-label="Kort"></div>
+    </section>
+
+    <!-- ===================== FARGER OG FORMER: OPPSETT ===================== -->
+    <section id="screen-shapes-setup" class="screen" aria-labelledby="shapes-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="shapes-setup-title">🎨 Farger og former</h2>
+        </div>
+        <p class="muted">Appen sier hva barnet skal finne, for eksempel «Finn den røde sirkelen».</p>
+        <p class="field-label">Øv på</p>
+        <div class="choice-row" data-game="shapes" data-key="mode">
+          <button data-value="farger">🎨 Farger</button><button data-value="former">🔺 Former</button><button data-value="begge">✨ Begge</button>
+        </div>
+        <p class="field-label">Antall å velge mellom</p>
+        <div class="choice-row" data-game="shapes" data-key="choices">
+          <button data-value="2">2</button><button data-value="3">3</button><button data-value="4">4</button><button data-value="6">6</button>
+        </div>
+        <p class="field-label">Antall oppgaver</p>
+        <div class="choice-row" data-game="shapes" data-key="rounds">
+          <button data-value="5">5</button><button data-value="10">10</button><button data-value="15">15</button>
+        </div>
+        <button class="btn primary big" data-start="shapes">Start ▶</button>
+      </div>
+    </section>
+
+    <!-- ===================== FARGER OG FORMER: SPILL ===================== -->
+    <section id="screen-shapes" class="screen game-screen" aria-label="Farger og former">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="shapes-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <div id="shapes-progress" class="progress" aria-label="Fremdrift"></div>
+        <div class="game-actions">
+          <button id="shapes-speak" class="icon-btn" aria-label="Hør oppgaven igjen" title="Hør igjen">🗣️</button>
+        </div>
+      </div>
+      <div class="play-area">
+        <p id="shapes-prompt" class="prompt"></p>
+        <div id="shapes-items" class="shape-items" role="group"></div>
+        <p id="shapes-feedback" class="feedback" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- ===================== BYGGEKLOSSER: OPPSETT ===================== -->
+    <section id="screen-build-setup" class="screen" aria-labelledby="build-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="build-setup-title">🧱 Byggeklosser</h2>
+        </div>
+        <p class="muted">Dra klosser inn fra kassen nederst. Tyngdekraften virker – bygg stødig!</p>
+        <div class="mode-grid">
+          <button class="mode-card" data-build="fri">
+            <span class="mode-emoji" aria-hidden="true">🏗️</span>
+            <span class="mode-name">Fri bygging</span>
+            <span class="mode-desc">Bygg hva du vil – og test det med jordskjelv.</span>
+          </button>
+          <button class="mode-card" data-build="tarn">
+            <span class="mode-emoji" aria-hidden="true">🗼</span>
+            <span class="mode-name">Høyt tårn</span>
+            <span class="mode-desc">Bygg opp til streken, og få tårnet til å stå. 3 nivåer.</span>
+          </button>
+          <button class="mode-card" data-build="bro">
+            <span class="mode-emoji" aria-hidden="true">🌉</span>
+            <span class="mode-name">Bygg en bro</span>
+            <span class="mode-desc">Hjelp kula over kløften til flagget. 3 nivåer.</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== BYGGEKLOSSER: SPILL ===================== -->
+    <section id="screen-build" class="screen game-screen fullscreen-game" aria-label="Byggeklosser">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="build-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <p id="build-goal" class="prompt small" aria-live="polite"></p>
+        <div class="game-actions">
+          <button id="build-play" class="icon-btn accent" aria-label="Slipp kula" title="Slipp kula">▶</button>
+          <button id="build-shake" class="icon-btn" aria-label="Jordskjelv" title="Jordskjelv">🌋</button>
+          <button id="build-reset" class="icon-btn" aria-label="Fjern alle klossene" title="Start på nytt">↺</button>
+        </div>
+      </div>
+      <div id="build-world" class="sim-world"><canvas id="build-canvas"></canvas></div>
+      <div class="build-bar">
+        <div id="build-palette" class="palette" role="toolbar" aria-label="Klosser – dra dem inn"></div>
+        <div class="build-tools" role="toolbar" aria-label="Valgt kloss">
+          <button class="icon-btn build-rotate" data-deg="-15" aria-label="Vri mot venstre" disabled>⟲</button>
+          <button class="icon-btn build-rotate" data-deg="15" aria-label="Vri mot høyre" disabled>⟳</button>
+          <button id="build-trash" class="icon-btn trash" aria-label="Søppelkasse – dra en kloss hit">🗑️</button>
+        </div>
+      </div>
+      <div id="build-done" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="build-done-title">
+        <div class="overlay-card">
+          <div class="done-picture" aria-hidden="true">🏆</div>
+          <div id="build-done-title" class="done-word"></div>
+          <p id="build-done-text" class="done-praise"></p>
+          <div class="overlay-actions">
+            <button id="build-stay" class="btn">👀 Se på</button>
+            <button id="build-next" class="btn primary">Neste nivå ➜</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== VÆSKELEK ===================== -->
+    <section id="screen-liquid" class="screen game-screen fullscreen-game" aria-label="Væskelek">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="home" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <p class="prompt small">Bland farger, hell olje i vannet, eller bygg med kraner og skåler. Trykk på sluket for å sette i proppen 💧</p>
+        <span class="icon-spacer" aria-hidden="true"></span>
+      </div>
+      <div id="liquid-world" class="sim-world liquid-world">
+        <canvas id="liquid-canvas"></canvas>
+        <canvas id="liquid-objects" aria-label="Væske – rør, hell eller flytt tingene"></canvas>
+        <div id="liquid-context" class="liquid-context" hidden>
+          <strong id="liquid-context-name">Kran</strong>
+          <label id="liquid-strength-row" class="strength">
+            <span aria-hidden="true">💧</span>
+            <input id="liquid-strength" type="range" min="0" max="100" step="5" aria-label="Strålestyrke">
+            <span aria-hidden="true">🌊</span>
+          </label>
+          <button id="liquid-toggle" class="btn small">⏸️ Skru av</button>
+          <button id="liquid-remove" class="btn small ghost">🗑️ Fjern</button>
+        </div>
+      </div>
+      <div id="liquid-toolbar" class="liquid-toolbar" role="toolbar" aria-label="Verktøy">
+        <div class="tool-group" aria-label="Verktøy">
+          <button data-set="tool:stir" title="Rør">✋<span>Rør</span></button>
+          <button data-set="tool:pour" title="Hell">🫗<span>Hell</span></button>
+          <button data-set="tool:sponge" title="Svamp">🧽<span>Svamp</span></button>
+        </div>
+        <div class="tool-group" id="liquid-paints" aria-label="Farge">
+          <button data-set="paint:bla" class="paint" style="--paint:#2a5f99" aria-label="Blå"></button>
+          <button data-set="paint:rod" class="paint" style="--paint:#ff0000" aria-label="Rød"></button>
+          <button data-set="paint:gul" class="paint" style="--paint:#ffff00" aria-label="Gul"></button>
+          <button data-set="paint:hvit" class="paint" style="--paint:#ffffff" aria-label="Hvit"></button>
+        </div>
+        <div class="tool-group" aria-label="Væske">
+          <button data-set="liquid:vann">💧<span>Vann</span></button>
+          <button data-set="liquid:olje">🫒<span>Olje</span></button>
+        </div>
+        <div class="tool-group" aria-label="Legg til">
+          <button data-add="kran" title="Kran">🚰<span>Kran</span></button>
+          <button data-add="skal" title="Skål">🥣<span>Skål</span></button>
+          <button data-add="halvmane" title="Halvmåne">🌙<span>Halvmåne</span></button>
+          <button data-add="planke" title="Planke">➖<span>Planke</span></button>
+          <button data-add="kloss" title="Kloss">🟥<span>Kloss</span></button>
+        </div>
+        <div class="tool-group" aria-label="Tyngdekraft">
+          <button data-set="gravity:ned">⬇️<span>Ned</span></button>
+          <button data-set="gravity:vipp">📱<span>Vipp</span></button>
+          <button data-set="gravity:av">🪐<span>Vektløs</span></button>
+        </div>
+        <div class="tool-group">
+          <button id="liquid-clear">🔄<span>Nytt vann</span></button>
+          <button id="liquid-empty">🫙<span>Tøm</span></button>
+        </div>
+      </div>
+      <!-- «Goo»-filter: myker opp og smelter partiklene sammen til en flytende overflate. -->
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <filter id="goo">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur"/>
+          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9"/>
+        </filter>
+      </svg>
+    </section>
+
+    <!-- ===================== DOMINO: OPPSETT ===================== -->
+    <section id="screen-domino-setup" class="screen" aria-labelledby="domino-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="domino-setup-title">🁢 Domino</h2>
+        </div>
+        <p class="muted">Trykk eller dra med fingeren for å sette opp brikker. Trykk 👉 for å dytte den første!</p>
+        <div class="mode-grid">
+          <button class="mode-card" data-domino="fri">
+            <span class="mode-emoji" aria-hidden="true">🁢</span>
+            <span class="mode-name">Fri lek</span>
+            <span class="mode-desc">Sett opp så mange brikker du vil, med planker og baller.</span>
+          </button>
+          <button class="mode-card" data-domino="utfordring">
+            <span class="mode-emoji" aria-hidden="true">🔔</span>
+            <span class="mode-name">Ring bjella</span>
+            <span class="mode-desc">Få brikkene til å velte helt bort til bjella. 3 nivåer.</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== DOMINO: SPILL ===================== -->
+    <section id="screen-domino" class="screen game-screen fullscreen-game" aria-label="Domino">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="domino-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <p id="domino-goal" class="prompt small" aria-live="polite"></p>
+        <span class="icon-spacer" aria-hidden="true"></span>
+      </div>
+      <div id="domino-world" class="sim-world"><canvas id="domino-canvas"></canvas></div>
+      <div id="domino-tools" class="liquid-toolbar" role="toolbar" aria-label="Verktøy">
+        <div class="tool-group" aria-label="Verktøy">
+          <button data-tool="domino" title="Sett opp brikker">🁢<span>Domino</span></button>
+          <button data-tool="planke" title="Planke">➖<span>Planke</span></button>
+          <button data-tool="ball" title="Ball">⚽<span>Ball</span></button>
+          <button data-tool="flytt" title="Flytt">✋<span>Flytt</span></button>
+          <button data-tool="fjern" title="Fjern">🧽<span>Fjern</span></button>
+        </div>
+        <div class="tool-group" aria-label="Handlinger">
+          <button id="domino-push" class="go" title="Dytt den første brikken">👉<span>Dytt</span></button>
+          <button id="domino-reset" title="Sett opp igjen">↺<span>Opp igjen</span></button>
+          <button id="domino-clear" title="Fjern alt">🗑️<span>Tøm</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== KULEBANE: OPPSETT ===================== -->
+    <section id="screen-marble-setup" class="screen" aria-labelledby="marble-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="marble-setup-title">🎱 Kulebane</h2>
+        </div>
+        <p class="muted">Legg ut planker, buer, trakter og trampoliner. Dra for å flytte, og vri med ↻.</p>
+        <div class="mode-grid">
+          <button class="mode-card" data-marble="fri">
+            <span class="mode-emoji" aria-hidden="true">🎱</span>
+            <span class="mode-name">Fri bane</span>
+            <span class="mode-desc">Bygg din egen kulebane og slipp så mange kuler du vil.</span>
+          </button>
+          <button class="mode-card" data-marble="utfordring">
+            <span class="mode-emoji" aria-hidden="true">🎯</span>
+            <span class="mode-name">Treff koppen</span>
+            <span class="mode-desc">Bygg en bane så kula havner i koppen. 4 nivåer.</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== KULEBANE: SPILL ===================== -->
+    <section id="screen-marble" class="screen game-screen fullscreen-game" aria-label="Kulebane">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="marble-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <p id="marble-goal" class="prompt small" aria-live="polite"></p>
+        <span class="icon-spacer" aria-hidden="true"></span>
+      </div>
+      <div id="marble-world" class="sim-world"><canvas id="marble-canvas"></canvas></div>
+      <div id="marble-tools" class="liquid-toolbar" role="toolbar" aria-label="Verktøy">
+        <div class="tool-group" aria-label="Deler">
+          <button data-tool="planke" title="Planke">➖<span>Planke</span></button>
+          <button data-tool="kort" title="Kort planke">▬<span>Kort</span></button>
+          <button data-tool="bue" title="Bue">⤴️<span>Bue</span></button>
+          <button data-tool="trakt" title="Trakt">🔻<span>Trakt</span></button>
+          <button data-tool="sprett" title="Trampoline">🔴<span>Trampoline</span></button>
+          <button data-tool="flytt" title="Flytt">✋<span>Flytt</span></button>
+        </div>
+        <div class="tool-group" aria-label="Handlinger">
+          <button id="marble-go" class="go" title="Slipp en kule">▶️<span>Slipp kule</span></button>
+          <button id="marble-clear" title="Fjern kulene">↺<span>Nye kuler</span></button>
+          <button id="marble-remove" title="Fjern valgt del" disabled>🗑️<span>Fjern del</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== FERDIG (felles) ===================== -->
+    <section id="screen-done" class="screen" aria-labelledby="done-title">
       <div class="panel center">
-        <div class="trophy" aria-hidden="true">🏆</div>
-        <h2 id="result-title">Kjempebra!</h2>
-        <p id="result-summary" class="result-summary"></p>
-        <ul id="result-list" class="result-list"></ul>
+        <div class="trophy" id="done-icon" aria-hidden="true">🎉</div>
+        <h2 id="done-title">Kjempebra!</h2>
+        <p id="done-summary" class="result-summary"></p>
+        <ul id="done-list" class="result-list"></ul>
         <div class="result-actions">
-          <button id="again-btn" class="btn primary">🔁 Spill igjen</button>
-          <button class="btn" data-go="setup">✏️ Nye ord</button>
+          <button id="done-again" class="btn primary">🔁 Spill igjen</button>
+          <button id="done-setup" class="btn">⚙️ Endre</button>
           <button class="btn ghost" data-go="home">🏠 Hjem</button>
         </div>
       </div>
     </section>
   </main>
 
+  <!-- Felles «nivå klart» for domino og kulebane. -->
+  <div id="phys-done" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="phys-done-title">
+    <div class="overlay-card">
+      <div class="done-picture" aria-hidden="true">🏆</div>
+      <div id="phys-done-title" class="done-word"></div>
+      <p id="phys-done-text" class="done-praise"></p>
+      <div class="overlay-actions">
+        <button id="phys-stay" class="btn">👀 Se på</button>
+        <button id="phys-next" class="btn primary">Neste nivå ➜</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <canvas id="confetti" aria-hidden="true"></canvas>
 
+  <script src="js/vendor/matter.min.js"></script>
   <script src="js/logic.js"></script>
+  <script src="js/fluid.js"></script>
   <script src="js/media.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/games/spell.js"></script>
+  <script src="js/games/count.js"></script>
+  <script src="js/games/memory.js"></script>
+  <script src="js/games/shapes.js"></script>
+  <script src="js/games/build.js"></script>
+  <script src="js/games/liquid.js"></script>
+  <script src="js/physics-kit.js"></script>
+  <script src="js/games/domino.js"></script>
+  <script src="js/games/marble.js"></script>
+  <script src="js/start.js"></script>
 </body>
 </html>

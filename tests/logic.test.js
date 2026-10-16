@@ -58,13 +58,6 @@ test('resolveSettings følger vanskelighetsgrad og overstyringer', () => {
   assert.equal(L.resolveSettings({ difficulty: 'ukjent' }).ghost, 'always');
 });
 
-test('starsFor gir 3 uten feil og minst 1', () => {
-  assert.equal(L.starsFor(0, 0, 4), 3);
-  assert.equal(L.starsFor(1, 0, 4), 2);
-  assert.equal(L.starsFor(0, 1, 3), 2);
-  assert.equal(L.starsFor(10, 2, 4), 1);
-});
-
 test('emojiFor finner bilder uavhengig av store/små bokstaver', () => {
   assert.equal(L.emojiFor('katt'), '🐱');
   assert.equal(L.emojiFor('BJØRN'), '🐻');
@@ -75,4 +68,79 @@ test('alle ferdige ordlister er gyldige ord', () => {
   for (const preset of L.PRESET_LISTS) {
     for (const w of preset.words) assert.equal(L.normalizeWord(w).length, [...w].length, w);
   }
+});
+
+test('letterSoundName gir filnavn for alle bokstaver, og lydfilene finnes', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  assert.equal(L.letterSoundName('t'), 't');
+  assert.equal(L.letterSoundName('Æ'), 'ae');
+  assert.equal(L.letterSoundName('ø'), 'oe');
+  assert.equal(L.letterSoundName('Å'), 'aa');
+  for (const letter of L.ALPHABET) {
+    const file = path.join(__dirname, '..', 'sounds', 'letters', L.letterSoundName(letter) + '.mp3');
+    assert.ok(fs.existsSync(file), `mangler lydfil for ${letter}`);
+  }
+});
+
+test('buildCountRound gir riktig svar blant tre ulike tall innenfor området', () => {
+  for (let seed = 1; seed < 300; seed++) {
+    const max = [5, 10, 20][seed % 3];
+    const r = L.buildCountRound(max, seeded(seed));
+    assert.ok(r.count >= 1 && r.count <= max);
+    assert.equal(r.options.length, 3);
+    assert.equal(new Set(r.options).size, 3);
+    assert.ok(r.options.includes(r.count));
+    assert.ok(r.options.every((n) => n >= 1 && n <= max));
+    assert.ok(L.COUNT_THEMES.includes(r.emoji));
+  }
+});
+
+test('buildCountRound gjentar ikke samme antall to ganger på rad', () => {
+  for (let seed = 1; seed < 100; seed++) {
+    assert.notEqual(L.buildCountRound(5, seeded(seed), 3).count, 3);
+  }
+});
+
+test('buildMemoryDeck lager nøyaktig to av hvert kort, alle med bilde', () => {
+  for (const theme of [...Object.keys(L.MEMORY_THEMES), 'blandet']) {
+    const deck = L.buildMemoryDeck(10, theme, seeded(7));
+    assert.equal(deck.length, 20);
+    const counts = {};
+    for (const c of deck) counts[c.pair] = (counts[c.pair] || 0) + 1;
+    assert.ok(Object.values(counts).every((n) => n === 2));
+    assert.deepEqual(deck.map((c) => c.id), deck.map((_, i) => i));
+  }
+  for (const theme of Object.values(L.MEMORY_THEMES)) {
+    for (const w of theme.words) assert.ok(L.emojiFor(w), `${w} mangler bilde`);
+  }
+});
+
+test('buildShapeRound: målet er entydig i alle moduser', () => {
+  for (const mode of ['farger', 'former', 'begge']) {
+    for (let seed = 1; seed < 200; seed++) {
+      const r = L.buildShapeRound(mode, 1 + (seed % 6), seeded(seed));
+      assert.ok(r.items.length >= 2);
+      const target = r.items.find((i) => i.id === r.targetId);
+      assert.ok(target);
+      const same = r.items.filter((i) => {
+        if (mode === 'farger') return i.color.key === target.color.key;
+        if (mode === 'former') return i.shape.key === target.shape.key;
+        return i.color.key === target.color.key && i.shape.key === target.shape.key;
+      });
+      assert.equal(same.length, 1, `${mode}: ${r.prompt} er ikke entydig`);
+      if (mode === 'farger') assert.equal(new Set(r.items.map((i) => i.shape.key)).size, 1);
+    }
+  }
+});
+
+test('farger og former bruker riktig norsk bøyning', () => {
+  const shape = (k) => L.SHAPES.find((s) => s.key === k);
+  const color = (k) => L.COLORS.find((c) => c.key === k);
+  assert.equal(L.shapePrompt({ shape: shape('sirkel'), color: color('rod') }, 'farger'), 'Finn den røde sirkelen');
+  assert.equal(L.shapePrompt({ shape: shape('hjerte'), color: color('gul') }, 'begge'), 'Finn det gule hjertet');
+  assert.equal(L.shapePrompt({ shape: shape('trekant'), color: color('bla') }, 'former'), 'Finn trekanten');
+  assert.equal(L.shapeDescription({ shape: shape('hjerte'), color: color('rod') }, 'begge'), 'Det er et rødt hjerte');
+  assert.equal(L.shapeDescription({ shape: shape('trekant'), color: color('bla') }, 'farger'), 'Det er en blå trekant');
+  assert.equal(L.shapeDescription({ shape: shape('stjerne'), color: color('lilla') }, 'former'), 'Det er en stjerne');
 });

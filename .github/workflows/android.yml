@@ -1,0 +1,66 @@
+name: Bygg Android-APK
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - uses: android-actions/setup-android@v3
+        with:
+          # Standardverdien («tools») finnes ikke lenger i sdkmanager.
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
+
+      - name: Installer avhengigheter
+        run: npm ci
+
+      - name: Kjør tester
+        run: npm test
+
+      - name: Kopier nettappen inn i Android-prosjektet
+        run: npm run cap:sync
+
+      - name: Bygg APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Gi APK-en et lesbart navn
+        id: apk
+        run: |
+          VERSION="${GITHUB_REF_NAME//\//-}"
+          OUT="Paizon-${VERSION}.apk"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "$OUT"
+          echo "file=$OUT" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paizon-apk
+          path: ${{ steps.apk.outputs.file }}
+          if-no-files-found: error
+
+      - name: Legg APK-en ved en GitHub-release (ved v*-tagger)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.apk.outputs.file }}

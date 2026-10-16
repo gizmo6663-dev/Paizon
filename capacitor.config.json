@@ -1,0 +1,8 @@
+{
+  "appId": "no.paizon.app",
+  "appName": "Paizon",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#fdf6ff"
+  }
+}
