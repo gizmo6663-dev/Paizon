@@ -5,9 +5,13 @@ og som kan installeres på hjemskjermen og brukes uten nett (PWA).
 
 ## Spill
 
+Ingen poeng, stjerner eller tidtaking – bare ros og konfetti når noe er riktig.
+
 ### 🔤 Stave ord
 En voksen skriver inn ordene barnet skal stave, velger vanskelighetsgrad og trykker **Start**.
-Barnet setter bokstavbrikker i riktig boks – ved å trykke, dra og slippe, eller skrive på tastaturet.
+Barnet **drar** bokstavbrikkene til riktig boks. Når en brikke plukkes opp, sies **bokstavlyden**
+(«t», ikke «te»). Når ordet er ferdig, staves det høyt med bokstavlyder – «k–a–t–t» – boks for boks,
+før hele ordet leses opp.
 
 | Vanskelighetsgrad | Hjelpebokstav i boksen | Ekstra «lurebokstaver» | Hint-knapp |
 |---|---|---|---|
@@ -15,15 +19,37 @@ Barnet setter bokstavbrikker i riktig boks – ved å trykke, dra og slippe, ell
 | 🦊 Middels | Dukker opp svakt etter 2 feil forsøk i boksen (kan endres) | 2 | Ja |
 | 🦁 Vanskelig | Aldri | 4 | Nei |
 
-Andre funksjoner:
-- Flere ord per runde, fremdriftsprikker og resultatskjerm med 1–3 stjerner per ord
-- Opplesning av ordet (talesyntese på norsk når enheten har det), og valgfritt av hver bokstav
-- Bilde (emoji) for vanlige ord som *katt*, *sol*, *eple* og fargene
-- Ferdige ordlister (dyr, mat, farger, familie, Æ/Ø/Å …) og egne lagrede lister
-- STORE eller små bokstaver, bland rekkefølgen, antall ekstra bokstaver, barnets navn i rosen
-- Lydeffekter og konfetti – lyd kan slås av
-- 🏠-knappen i spillet må holdes inne i ett sekund, så barnet ikke avslutter ved et uhell
-- Statistikk over stjerner og ord lagres lokalt på enheten
+Andre funksjoner: bilde (emoji) for vanlige ord, ferdige og egne ordlister, STORE/små bokstaver,
+bland rekkefølgen, barnets navn i rosen. Under **🔈 Bokstavlyder** kan man lytte til alle lydene og
+holde inne 🎙️ for å spille inn sin egen stemme for en bokstav.
+
+### 🔢 Telle
+Barnet trykker på tingene for å telle dem høyt (hver ting får et tall), og velger så riktig tall
+blant tre. 💡 teller sammen med barnet. Velg tall opp til 5, 10 eller 20.
+
+### 🧩 Memory
+Snu to kort om gangen og finn like par (3–10 par). Temaer: dyr, mat, ting, natur eller blandet.
+Ordet kan vises under bildet og leses opp når kortet snus – en fin kobling til lesing.
+
+### 🎨 Farger og former
+Appen sier for eksempel «Finn den røde sirkelen» eller «Finn det gule hjertet». Øv på farger,
+former eller begge. Trykker barnet feil, forteller appen hva det trykket på («Det er en blå trekant»).
+
+### Felles
+- Lyd kan slås av, og alt leses opp med norsk talesyntese når enheten har det
+- 🏠-knappen i spillene må holdes inne i ett sekund, så barnet ikke avslutter ved et uhell
+- Innstillingene huskes på enheten
+
+## Bokstavlydene
+
+Lydfilene i `sounds/letters/` er laget med [espeak-ng](https://github.com/espeak-ng/espeak-ng) sin
+norske stemme ut fra fonemer, slik at de blir lyder og ikke bokstavnavn. De lages på nytt med:
+
+```bash
+scripts/generate-letter-sounds.sh   # krever espeak-ng og ffmpeg
+```
+
+Talesyntese gir en litt robotaktig stemme. Den beste kvaliteten får man ved å spille inn egne lyder i appen.
 
 ## Kjøre lokalt
 
@@ -72,8 +98,10 @@ Slå på Pages under *Settings → Pages → Source: GitHub Actions*.
 index.html          Skjermer: forside, oppsett, spill, resultat
 css/style.css       Utseende
 js/logic.js         Ren spill-logikk (testes med node --test)
-js/media.js         Lyd, opplesning og konfetti
-js/app.js           Skjermstyring og «Stave ord»-spillet
+js/media.js         Lydeffekter, bokstavlyder, opptak, opplesning og konfetti
+js/core.js          Felles skall: skjermer, lagring, innstillinger, ferdigskjerm
+js/games/*.js       Ett skript per spill (spell, count, memory, shapes)
+sounds/letters/     Bokstavlyder (mp3)
 sw.js               Service worker for offline-bruk
 scripts/build-web.mjs  Kopierer nettappen til www/ (brukes av Capacitor og Pages)
 capacitor.config.json  Oppsett for Android-appen
@@ -81,4 +109,5 @@ android/            Native Android-prosjekt (Capacitor)
 assets/             Kildebilder for app-ikon og oppstartsbilde
 ```
 
-Nye spill legges til som et nytt kort på forsiden og en egen skjerm.
+Nye spill legges til som et kort på forsiden, skjermer i `index.html` og et skript i `js/games/`
+som registrerer seg med `Paizon.registerGame`.

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#6c5ce7">
-  <meta name="description" content="Paizon – lærerike spill for barn. Første spill: Stave ord.">
+  <meta name="description" content="Paizon – lærerike spill for barn: stave ord, telle, memory og farger og former.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Paizon">
@@ -33,36 +33,35 @@
     <section id="screen-home" class="screen active" aria-labelledby="home-title">
       <h1 id="home-title" class="title">Hei! Hva vil du spille?</h1>
       <div class="game-grid">
-        <button class="game-card" data-go="setup" style="--card: #6c5ce7">
+        <button class="game-card" data-go="spell-setup" style="--card: #6c5ce7">
           <span class="game-emoji" aria-hidden="true">🔤</span>
           <span class="game-name">Stave ord</span>
-          <span class="game-desc">Sett bokstavene på riktig plass</span>
+          <span class="game-desc">Dra bokstavene på riktig plass</span>
         </button>
-        <div class="game-card soon" style="--card: #00b894" aria-disabled="true">
+        <button class="game-card" data-go="count-setup" style="--card: #00b894">
           <span class="game-emoji" aria-hidden="true">🔢</span>
           <span class="game-name">Telle</span>
-          <span class="game-desc">Kommer snart</span>
-        </div>
-        <div class="game-card soon" style="--card: #e17055" aria-disabled="true">
+          <span class="game-desc">Tell tingene og finn tallet</span>
+        </button>
+        <button class="game-card" data-go="memory-setup" style="--card: #e17055">
           <span class="game-emoji" aria-hidden="true">🧩</span>
           <span class="game-name">Memory</span>
-          <span class="game-desc">Kommer snart</span>
-        </div>
-        <div class="game-card soon" style="--card: #0984e3" aria-disabled="true">
+          <span class="game-desc">Finn like par</span>
+        </button>
+        <button class="game-card" data-go="shapes-setup" style="--card: #0984e3">
           <span class="game-emoji" aria-hidden="true">🎨</span>
           <span class="game-name">Farger og former</span>
-          <span class="game-desc">Kommer snart</span>
-        </div>
+          <span class="game-desc">Finn riktig farge og form</span>
+        </button>
       </div>
-      <p class="stats" id="stats"></p>
     </section>
 
-    <!-- ===================== OPPSETT ===================== -->
-    <section id="screen-setup" class="screen" aria-labelledby="setup-title">
+    <!-- ===================== STAVE ORD: OPPSETT ===================== -->
+    <section id="screen-spell-setup" class="screen" aria-labelledby="spell-setup-title">
       <div class="panel">
         <div class="panel-head">
           <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
-          <h2 id="setup-title">🔤 Stave ord</h2>
+          <h2 id="spell-setup-title">🔤 Stave ord</h2>
         </div>
         <p class="muted">For voksne: skriv inn ordene barnet skal stave, velg vanskelighetsgrad og trykk start.</p>
 
@@ -129,59 +128,187 @@
               <span>Barnets navn (til ros)</span>
               <input id="opt-name" type="text" maxlength="20" placeholder="Valgfritt">
             </label>
-            <label class="adv-check"><input type="checkbox" id="opt-shuffle"> Bland rekkefølgen på ordene</label>
+            <label class="adv-check"><input type="checkbox" id="opt-letter-sound"> Si bokstavlyden når en bokstav plukkes opp</label>
+            <label class="adv-check"><input type="checkbox" id="opt-spell-out"> Stav ordet høyt med bokstavlyder når det er ferdig</label>
             <label class="adv-check"><input type="checkbox" id="opt-speak-word"> Les opp ordet når det starter</label>
-            <label class="adv-check"><input type="checkbox" id="opt-speak-letter"> Si bokstaven når den settes på plass</label>
+            <label class="adv-check"><input type="checkbox" id="opt-shuffle"> Bland rekkefølgen på ordene</label>
             <label class="adv-check"><input type="checkbox" id="opt-picture"> Vis bilde av ordet når det finnes</label>
           </div>
         </details>
 
-        <button id="start-btn" class="btn primary big" disabled>Start ▶</button>
+        <details class="advanced" id="letter-sounds">
+          <summary>🔈 Bokstavlyder</summary>
+          <p class="field-help">Trykk på en bokstav for å høre lyden.
+            <span class="rec-help">Hold inne 🎙️ for å spille inn din egen stemme (f.eks. «t», ikke «te»). ↺ går tilbake til standardlyden.</span></p>
+          <div id="letter-grid" class="letter-grid"></div>
+        </details>
+
+        <button id="spell-start" class="btn primary big" disabled>Start ▶</button>
       </div>
     </section>
 
-    <!-- ===================== SPILL ===================== -->
-    <section id="screen-game" class="screen" aria-label="Stave ord">
+    <!-- ===================== STAVE ORD: SPILL ===================== -->
+    <section id="screen-spell" class="screen game-screen" aria-label="Stave ord">
       <div class="game-top">
-        <button id="exit-btn" class="icon-btn hold-btn" aria-label="Hold inne for å avslutte">
+        <button class="icon-btn hold-btn" data-exit="spell-setup" aria-label="Hold inne for å avslutte">
           <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
           <span aria-hidden="true">🏠</span>
         </button>
-        <div id="progress" class="progress" aria-label="Fremdrift"></div>
+        <div id="spell-progress" class="progress" aria-label="Fremdrift"></div>
         <div class="game-actions">
-          <button id="speak-btn" class="icon-btn" aria-label="Les opp ordet" title="Les opp ordet">🗣️</button>
-          <button id="hint-btn" class="icon-btn" aria-label="Hint" title="Hint">💡</button>
+          <button id="spell-speak" class="icon-btn" aria-label="Les opp ordet" title="Les opp ordet">🗣️</button>
+          <button id="spell-hint" class="icon-btn" aria-label="Hint" title="Hint">💡</button>
         </div>
       </div>
 
       <div class="play-area">
-        <div id="picture" class="picture" aria-hidden="true"></div>
+        <div id="spell-picture" class="picture" aria-hidden="true"></div>
         <div id="slots" class="slots" role="group" aria-label="Bokser for bokstaver"></div>
-        <p id="feedback" class="feedback" aria-live="polite"></p>
-        <div id="bank" class="bank" role="group" aria-label="Bokstaver"></div>
+        <p id="spell-feedback" class="feedback" aria-live="polite"></p>
+        <div id="bank" class="bank" role="group" aria-label="Bokstaver – dra dem til boksene"></div>
       </div>
 
       <div id="word-done" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="done-word">
         <div class="overlay-card">
           <div id="done-picture" class="done-picture" aria-hidden="true"></div>
           <div id="done-word" class="done-word"></div>
-          <div id="done-stars" class="done-stars" aria-label=""></div>
           <p id="done-praise" class="done-praise"></p>
-          <button id="next-btn" class="btn primary big">Neste ord ➜</button>
+          <div class="overlay-actions">
+            <button id="done-replay" class="btn">🔁 Hør igjen</button>
+            <button id="next-btn" class="btn primary">Neste ord ➜</button>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- ===================== RESULTAT ===================== -->
-    <section id="screen-result" class="screen" aria-labelledby="result-title">
+    <!-- ===================== TELLE: OPPSETT ===================== -->
+    <section id="screen-count-setup" class="screen" aria-labelledby="count-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="count-setup-title">🔢 Telle</h2>
+        </div>
+        <p class="muted">Barnet trykker på tingene for å telle dem høyt, og velger så riktig tall.</p>
+        <p class="field-label">Tall opp til</p>
+        <div class="choice-row" data-game="count" data-key="max">
+          <button data-value="5">5</button><button data-value="10">10</button><button data-value="20">20</button>
+        </div>
+        <p class="field-label">Antall oppgaver</p>
+        <div class="choice-row" data-game="count" data-key="rounds">
+          <button data-value="5">5</button><button data-value="10">10</button><button data-value="15">15</button>
+        </div>
+        <button class="btn primary big" data-start="count">Start ▶</button>
+      </div>
+    </section>
+
+    <!-- ===================== TELLE: SPILL ===================== -->
+    <section id="screen-count" class="screen game-screen" aria-label="Telle">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="count-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <div id="count-progress" class="progress" aria-label="Fremdrift"></div>
+        <div class="game-actions">
+          <button id="count-help" class="icon-btn" aria-label="Tell sammen med meg" title="Tell sammen">💡</button>
+        </div>
+      </div>
+      <div class="play-area">
+        <p class="prompt">Hvor mange er det?</p>
+        <div id="count-items" class="count-items" role="group" aria-label="Trykk for å telle"></div>
+        <p id="count-feedback" class="feedback" aria-live="polite"></p>
+        <div id="count-options" class="number-options" role="group" aria-label="Velg tall"></div>
+      </div>
+    </section>
+
+    <!-- ===================== MEMORY: OPPSETT ===================== -->
+    <section id="screen-memory-setup" class="screen" aria-labelledby="memory-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="memory-setup-title">🧩 Memory</h2>
+        </div>
+        <p class="muted">Snu to kort om gangen og finn like par.</p>
+        <p class="field-label">Antall par</p>
+        <div class="choice-row" data-game="memory" data-key="pairs">
+          <button data-value="3">3</button><button data-value="6">6</button><button data-value="8">8</button><button data-value="10">10</button>
+        </div>
+        <p class="field-label">Tema</p>
+        <div class="choice-row" data-game="memory" data-key="theme" id="memory-themes"></div>
+        <div class="adv-grid spaced">
+          <label class="adv-check"><input type="checkbox" data-game="memory" data-key="showWord"> Vis ordet under bildet</label>
+          <label class="adv-check"><input type="checkbox" data-game="memory" data-key="speak"> Si navnet når et kort snus</label>
+        </div>
+        <button class="btn primary big" data-start="memory">Start ▶</button>
+      </div>
+    </section>
+
+    <!-- ===================== MEMORY: SPILL ===================== -->
+    <section id="screen-memory" class="screen game-screen" aria-label="Memory">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="memory-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <p id="memory-status" class="prompt small" aria-live="polite"></p>
+        <span class="icon-spacer" aria-hidden="true"></span>
+      </div>
+      <div id="memory-board" class="memory-board" role="group" aria-label="Kort"></div>
+    </section>
+
+    <!-- ===================== FARGER OG FORMER: OPPSETT ===================== -->
+    <section id="screen-shapes-setup" class="screen" aria-labelledby="shapes-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="shapes-setup-title">🎨 Farger og former</h2>
+        </div>
+        <p class="muted">Appen sier hva barnet skal finne, for eksempel «Finn den røde sirkelen».</p>
+        <p class="field-label">Øv på</p>
+        <div class="choice-row" data-game="shapes" data-key="mode">
+          <button data-value="farger">🎨 Farger</button><button data-value="former">🔺 Former</button><button data-value="begge">✨ Begge</button>
+        </div>
+        <p class="field-label">Antall å velge mellom</p>
+        <div class="choice-row" data-game="shapes" data-key="choices">
+          <button data-value="2">2</button><button data-value="3">3</button><button data-value="4">4</button><button data-value="6">6</button>
+        </div>
+        <p class="field-label">Antall oppgaver</p>
+        <div class="choice-row" data-game="shapes" data-key="rounds">
+          <button data-value="5">5</button><button data-value="10">10</button><button data-value="15">15</button>
+        </div>
+        <button class="btn primary big" data-start="shapes">Start ▶</button>
+      </div>
+    </section>
+
+    <!-- ===================== FARGER OG FORMER: SPILL ===================== -->
+    <section id="screen-shapes" class="screen game-screen" aria-label="Farger og former">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="shapes-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <div id="shapes-progress" class="progress" aria-label="Fremdrift"></div>
+        <div class="game-actions">
+          <button id="shapes-speak" class="icon-btn" aria-label="Hør oppgaven igjen" title="Hør igjen">🗣️</button>
+        </div>
+      </div>
+      <div class="play-area">
+        <p id="shapes-prompt" class="prompt"></p>
+        <div id="shapes-items" class="shape-items" role="group"></div>
+        <p id="shapes-feedback" class="feedback" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- ===================== FERDIG (felles) ===================== -->
+    <section id="screen-done" class="screen" aria-labelledby="done-title">
       <div class="panel center">
-        <div class="trophy" aria-hidden="true">🏆</div>
-        <h2 id="result-title">Kjempebra!</h2>
-        <p id="result-summary" class="result-summary"></p>
-        <ul id="result-list" class="result-list"></ul>
+        <div class="trophy" id="done-icon" aria-hidden="true">🎉</div>
+        <h2 id="done-title">Kjempebra!</h2>
+        <p id="done-summary" class="result-summary"></p>
+        <ul id="done-list" class="result-list"></ul>
         <div class="result-actions">
-          <button id="again-btn" class="btn primary">🔁 Spill igjen</button>
-          <button class="btn" data-go="setup">✏️ Nye ord</button>
+          <button id="done-again" class="btn primary">🔁 Spill igjen</button>
+          <button id="done-setup" class="btn">⚙️ Endre</button>
           <button class="btn ghost" data-go="home">🏠 Hjem</button>
         </div>
       </div>
@@ -193,6 +320,11 @@
 
   <script src="js/logic.js"></script>
   <script src="js/media.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/games/spell.js"></script>
+  <script src="js/games/count.js"></script>
+  <script src="js/games/memory.js"></script>
+  <script src="js/games/shapes.js"></script>
+  <script src="js/start.js"></script>
 </body>
 </html>

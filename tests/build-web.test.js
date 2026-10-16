@@ -13,5 +13,8 @@ test('www/ får Capacitor-runtime lastet før appens egne skript', () => {
   const html = readFileSync(path.join(root, 'www/index.html'), 'utf8');
   const cap = html.indexOf('js/capacitor.js');
   assert.ok(cap > 0, 'capacitor.js er ikke lastet i www/index.html');
-  assert.ok(cap < html.indexOf('js/media.js') && cap < html.indexOf('js/app.js'));
+  for (const script of ['js/media.js', 'js/core.js', 'js/games/spell.js']) {
+    assert.ok(html.indexOf(script) > cap, `${script} må lastes etter capacitor.js`);
+  }
+  assert.ok(existsSync(path.join(root, 'www/sounds/letters/t.mp3')), 'bokstavlydene mangler i www/');
 });

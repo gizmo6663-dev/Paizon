@@ -119,14 +119,6 @@
     };
   }
 
-  /** 3 stjerner uten feil, 2 med få feil, ellers 1. Alle får minst én stjerne. */
-  function starsFor(mistakes, hintsUsed, length) {
-    const penalty = (mistakes | 0) + (hintsUsed | 0);
-    if (penalty === 0) return 3;
-    if (penalty <= Math.max(1, Math.floor(length / 3))) return 2;
-    return 1;
-  }
-
   const EMOJI = {
     // Dyr
     KATT: '🐱', HUND: '🐶', MUS: '🐭', HEST: '🐴', KU: '🐮', GRIS: '🐷', SAU: '🐑',
@@ -166,6 +158,122 @@
     { name: 'Æ, Ø og Å', icon: '🇳🇴', words: ['bjørn', 'blå', 'båt', 'snø', 'pære', 'løve', 'måne', 'jordbær'] },
   ];
 
+  // ---------- Bokstavlyder ----------
+  const LETTER_FILE = { 'Æ': 'ae', 'Ø': 'oe', 'Å': 'aa' };
+
+  /** Filnavn (uten endelse) for lyden til en bokstav, f.eks. 'T' → 't', 'Ø' → 'oe'. */
+  function letterSoundName(letter) {
+    const l = normalizeWord(letter);
+    return l ? (LETTER_FILE[l] || l.toLowerCase()) : '';
+  }
+
+  // ---------- Telle ----------
+  const COUNT_THEMES = ['🍎', '🐞', '🚗', '⭐', '🐟', '🎈', '🦆', '🍓', '🌸', '🐶', '⚽', '🧁'];
+
+  /** En telleoppgave: antall ting og tre tall å velge mellom (alle innenfor 1..max). */
+  function buildCountRound(max, rng, previous) {
+    const random = rng || Math.random;
+    const top = Math.max(3, max | 0);
+    let n;
+    do {
+      n = 1 + Math.floor(random() * top);
+    } while (n === previous && top > 1);
+    const options = new Set([n]);
+    const near = shuffle([n - 2, n - 1, n + 1, n + 2].filter((x) => x >= 1 && x <= top), random);
+    for (const x of near) {
+      if (options.size >= 3) break;
+      options.add(x);
+    }
+    return {
+      count: n,
+      emoji: COUNT_THEMES[Math.floor(random() * COUNT_THEMES.length)],
+      options: Array.from(options).sort((a, b) => a - b),
+    };
+  }
+
+  // ---------- Memory ----------
+  const MEMORY_THEMES = {
+    dyr: { name: 'Dyr', icon: '🐾', words: ['katt', 'hund', 'mus', 'hest', 'ku', 'gris', 'sau', 'fisk', 'bjørn', 'løve', 'frosk', 'ugle', 'pingvin', 'elefant'] },
+    mat: { name: 'Mat', icon: '🍎', words: ['eple', 'banan', 'pære', 'drue', 'jordbær', 'gulrot', 'brød', 'ost', 'egg', 'is', 'kake', 'pizza', 'tomat', 'sitron'] },
+    ting: { name: 'Ting', icon: '🚗', words: ['bil', 'buss', 'tog', 'båt', 'fly', 'sykkel', 'ball', 'bok', 'hus', 'gave', 'ballong', 'robot', 'rakett', 'krone'] },
+    natur: { name: 'Natur', icon: '🌳', words: ['sol', 'måne', 'stjerne', 'sky', 'snø', 'tre', 'blomst', 'regnbue', 'fjell', 'hav', 'regn', 'bie', 'sommerfugl', 'snegl'] },
+  };
+
+  /** Stokket kortstokk med `pairs` par fra et tema (eller alle temaer om tema er 'blandet'). */
+  function buildMemoryDeck(pairs, theme, rng) {
+    const random = rng || Math.random;
+    const pool = theme && MEMORY_THEMES[theme]
+      ? MEMORY_THEMES[theme].words
+      : Object.values(MEMORY_THEMES).flatMap((t) => t.words);
+    const chosen = shuffle(pool, random).slice(0, Math.max(2, pairs | 0));
+    const cards = [];
+    chosen.forEach((word, pair) => {
+      for (let k = 0; k < 2; k++) cards.push({ id: cards.length, pair, word, emoji: emojiFor(word) });
+    });
+    return shuffle(cards, random).map((c, id) => Object.assign(c, { id }));
+  }
+
+  // ---------- Farger og former ----------
+  // def: bestemt form av adjektivet («den røde»), m/n: ubestemt hankjønn/intetkjønn («en rød», «et rødt»).
+  const COLORS = [
+    { key: 'rod', hex: '#e74c3c', m: 'rød', n: 'rødt', def: 'røde' },
+    { key: 'bla', hex: '#2e86de', m: 'blå', n: 'blått', def: 'blå' },
+    { key: 'gul', hex: '#f9ca24', m: 'gul', n: 'gult', def: 'gule' },
+    { key: 'gronn', hex: '#27ae60', m: 'grønn', n: 'grønt', def: 'grønne' },
+    { key: 'oransje', hex: '#f0932b', m: 'oransje', n: 'oransje', def: 'oransje' },
+    { key: 'lilla', hex: '#8e44ad', m: 'lilla', n: 'lilla', def: 'lilla' },
+    { key: 'rosa', hex: '#fd79a8', m: 'rosa', n: 'rosa', def: 'rosa' },
+    { key: 'brun', hex: '#8d5524', m: 'brun', n: 'brunt', def: 'brune' },
+  ];
+  const SHAPES = [
+    { key: 'sirkel', name: 'sirkel', def: 'sirkelen', neuter: false },
+    { key: 'firkant', name: 'firkant', def: 'firkanten', neuter: false },
+    { key: 'trekant', name: 'trekant', def: 'trekanten', neuter: false },
+    { key: 'stjerne', name: 'stjerne', def: 'stjernen', neuter: false },
+    { key: 'hjerte', name: 'hjerte', def: 'hjertet', neuter: true },
+    { key: 'oval', name: 'oval', def: 'ovalen', neuter: false },
+  ];
+
+  /** «Finn den røde sirkelen» / «Finn trekanten» / «Finn det gule hjertet». */
+  function shapePrompt(item, mode) {
+    if (mode === 'former') return `Finn ${item.shape.def}`;
+    return `Finn ${item.shape.neuter ? 'det' : 'den'} ${item.color.def} ${item.shape.def}`;
+  }
+
+  /** «Det er en blå trekant» / «Det er et rødt hjerte». */
+  function shapeDescription(item, mode) {
+    const article = item.shape.neuter ? 'et' : 'en';
+    if (mode === 'former') return `Det er ${article} ${item.shape.name}`;
+    const adj = item.shape.neuter ? item.color.n : item.color.m;
+    return `Det er ${article} ${adj} ${item.shape.name}`;
+  }
+
+  /**
+   * En runde i «Farger og former». mode: 'farger' (samme form, ulike farger),
+   * 'former' (ulike former) eller 'begge' (ulike kombinasjoner).
+   */
+  function buildShapeRound(mode, choices, rng) {
+    const random = rng || Math.random;
+    const n = Math.max(2, Math.min(6, choices | 0));
+    let items;
+    if (mode === 'farger') {
+      const shape = SHAPES[Math.floor(random() * SHAPES.length)];
+      items = shuffle(COLORS, random).slice(0, n).map((color) => ({ shape, color }));
+    } else if (mode === 'former') {
+      items = shuffle(SHAPES, random).slice(0, n).map((shape) => ({
+        shape,
+        color: COLORS[Math.floor(random() * COLORS.length)],
+      }));
+    } else {
+      const combos = [];
+      for (const shape of SHAPES) for (const color of COLORS) combos.push({ shape, color });
+      items = shuffle(combos, random).slice(0, n);
+    }
+    items = items.map((item, id) => Object.assign({ id }, item));
+    const target = items[Math.floor(random() * items.length)];
+    return { items, targetId: target.id, prompt: shapePrompt(target, mode) };
+  }
+
   const api = {
     ALPHABET,
     MAX_WORD_LENGTH,
@@ -177,8 +285,17 @@
     shuffle,
     buildLetterBank,
     resolveSettings,
-    starsFor,
     emojiFor,
+    letterSoundName,
+    COUNT_THEMES,
+    buildCountRound,
+    MEMORY_THEMES,
+    buildMemoryDeck,
+    COLORS,
+    SHAPES,
+    shapePrompt,
+    shapeDescription,
+    buildShapeRound,
   };
 
   if (typeof module !== 'undefined' && module.exports) {
