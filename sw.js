@@ -1,5 +1,5 @@
 /* Enkel service worker: gjør appen tilgjengelig uten nett etter første besøk. */
-const CACHE = 'paizon-v7';
+const CACHE = 'paizon-v8';
 const ASSETS = [
   './',
   'index.html',

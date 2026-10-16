@@ -5,14 +5,13 @@
  * Viscoelastic Fluid Simulation»: dobbel tetthetsavslapning gir trykk og overflatespenning,
  * og viskositet dempes parvis. Naboer finnes med et rutenett med cellestørrelse h.
  *
- * Flere væsker i samme kar: hver partikkel har et materiale (vann, olje, honning).
+ * Flere væsker i samme kar: hver partikkel har et materiale (vann eller olje).
  * - Ulike materialer frastøter hverandre bare (ingen «klistring» over grenseflaten), og
  *   blander verken farge eller fart – derfor legger olje og vann seg i lag.
  * - Lettere materialer flyttes mer enn tunge når de dytter hverandre, så olje flyter opp.
- * - Honning har i tillegg indre demping, så den siger langsomt.
  *
  * Hindringer (kloss, planke, halvmåne, skål) er former med signert avstand (SDF) som
- * partiklene skyves ut av. Kraner lager nye partikler, og sluk fjerner dem.
+ * partiklene skyves ut av. Kraner lager nye partikler, og sluket i bunnen fjerner dem.
  *
  * Farger på vann lagres som RYB (rød, gul, blå – som maling) og blandes mellom naboer,
  * så blå + gul blir grønn slik barn kjenner det fra maling.
@@ -23,16 +22,10 @@
   'use strict';
 
   // Væsketyper. mass: tyngre væske synker. sigma/beta: viskositet mellom naboer.
-  // drag: luftmotstand per steg. smooth: hvor sterkt naboer i samme væske tvinges til lik fart
-  // (0–1, gjør honning seig). bulk: demping der væsken ligger samlet (mange naboer) – en tynn
-  // stråle renner, men en haug siger bare sakte ut. stick: fart som mistes langs vegger.
-  // spring: stivhet i elastiske fjærer mellom naboer (Clavet m.fl. avsnitt 5) – fjærene gir
-  // sakte etter (plastisitet), så honning holder formen en stund og siger langsomt.
-  // color: fast farge (null = malingsfarge).
+  // mix: hvor fort malingsfarger blandes. color: fast farge (null = malingsfarge).
   const MATERIALS = [
-    { key: 'vann', label: 'Vann', mass: 1, sigma: 0.1, beta: 0.02, drag: 0, mix: 0.02, color: null },
-    { key: 'olje', label: 'Olje', mass: 0.7, sigma: 0.35, beta: 0.08, drag: 0.01, mix: 0, color: [236, 190, 52] },
-    { key: 'honning', label: 'Honning', mass: 1.4, sigma: 3, beta: 1, drag: 0.01, smooth: 0.9, bulk: 0.6, stick: 0.85, spring: 3, yield: 0.35, plastic: 0.005, mix: 0, color: [214, 132, 20] },
+    { key: 'vann', label: 'Vann', mass: 1, sigma: 0.1, beta: 0.02, mix: 0.02, color: null },
+    { key: 'olje', label: 'Olje', mass: 0.7, sigma: 0.35, beta: 0.08, mix: 0, color: [236, 190, 52] },
   ];
   const LIQUIDS = {};
   MATERIALS.forEach((m, i) => { LIQUIDS[m.key] = Object.assign({ index: i }, m); });
@@ -140,14 +133,12 @@
       this.cy = new Float32Array(n);
       this.cb = new Float32Array(n);
       this.mat = new Uint8Array(n);
-      this.uid = new Int32Array(n); // fast ID per partikkel – indeksene byttes når noen fjernes
-      this.nextUid = 1;
-      this.springs = new Map(); // nøkkel «a,b» (uid) → hvilelengde
       this.next = new Int32Array(n);
       this.stirs = [];
       this.obstacles = [];
       this.faucets = [];
-      this.drains = [];
+      // Sluket er en fast åpning midt i bunnen. open = false betyr at proppen er i.
+      this.floorDrain = { open: !!o.drain, width: 0.16 };
       this.pourRyb = PAINTS.bla.ryb;
       this.setLiquid(o.liquid || 'vann');
       this.resize(this.width, this.height);
@@ -168,7 +159,7 @@
       for (let i = 0; i < this.count; i++) this.keepInside(i);
     }
 
-    /** Legg til en partikkel. mat: 0 vann, 1 olje, 2 honning. Gir false når simulatoren er full. */
+    /** Legg til en partikkel. mat: 0 vann, 1 olje. Gir false når simulatoren er full. */
     add(x, y, ryb, vx, vy, mat) {
       if (this.count >= this.max) return false;
       const i = this.count++;
@@ -180,7 +171,6 @@
       this.cy[i] = ryb[1];
       this.cb[i] = ryb[2];
       this.mat[i] = mat == null ? this.pourMat : mat;
-      this.uid[i] = this.nextUid++;
       this.keepInside(i);
       return true;
     }
@@ -215,12 +205,11 @@
     removeAt(i) {
       const last = --this.count;
       if (i === last) return;
-      for (const a of [this.x, this.y, this.px, this.py, this.vx, this.vy, this.cr, this.cy, this.cb, this.mat, this.uid]) a[i] = a[last];
+      for (const a of [this.x, this.y, this.px, this.py, this.vx, this.vy, this.cr, this.cy, this.cb, this.mat]) a[i] = a[last];
     }
 
     clear() {
       this.count = 0;
-      this.springs.clear();
     }
 
     /** Rør i væsken: partikler nær (x, y) dras med bevegelsen (dx, dy) til neste steg. */
@@ -236,25 +225,28 @@
       return f;
     }
 
-    addDrain(x, y, r) {
-      const d = { x, y, r: r || this.h * 1.6 };
-      this.drains.push(d);
-      return d;
+    /** Hvor sluket i bunnen er (x fra–til). */
+    drainSpan() {
+      const w = this.width * this.floorDrain.width;
+      return { x0: (this.width - w) / 2, x1: (this.width + w) / 2 };
     }
 
     emit() {
       const { h } = this;
       for (const f of this.faucets) {
         if (!f.on || f.strength <= 0) continue;
-        // Sterkere stråle: flere partikler, og de kommer fortere ut.
-        f.acc += 0.25 + f.strength * 1.6;
+        // Sterkere stråle: dråpene kommer fortere ut, og det kommer flere av dem.
+        // Avstanden mellom dråpene holdes rundt hvileavstanden (0,5 h) – kommer de
+        // tettere, presser trykket dem ut til siden og strålen blir tykk.
         const speed = h * (0.12 + 0.4 * f.strength);
+        f.acc += speed / (h * 0.5);
         const len = Math.hypot(f.dx, f.dy) || 1;
         const nx = f.dx / len;
         const ny = f.dy / len;
         while (f.acc >= 1) {
           f.acc -= 1;
-          const side = (Math.random() - 0.5) * h * 0.5;
+          // Nesten på rekke: gir en tynn stråle.
+          const side = (Math.random() - 0.5) * h * 0.08;
           if (!this.add(f.x - ny * side, f.y + nx * side, this.pourRyb, nx * speed, ny * speed)) {
             f.acc = 0;
             break;
@@ -264,7 +256,19 @@
     }
 
     drain() {
-      for (const d of this.drains) this.removeNear(d.x, d.y, d.r);
+      if (!this.floorDrain.open) return;
+      const { x0, x1 } = this.drainSpan();
+      const yMin = this.height - this.h * 0.35;
+      let i = 0;
+      while (i < this.count) {
+        if (this.y[i] > yMin && this.x[i] > x0 && this.x[i] < x1) this.removeAt(i);
+        else i++;
+      }
+    }
+
+    /** Antall naboer partikkelen hadde i siste steg (brukes til å tegne tynne stråler tynt). */
+    neighbors(i) {
+      return this.nbCount ? this.nbCount[i] : 8;
     }
 
     // ---------- Hindringer ----------
@@ -372,15 +376,10 @@
       const n = this.count;
       const { x, y, px, py, vx, vy, mat } = this;
 
-      // 1. Tyngdekraft, demping (honning) og røring.
+      // 1. Tyngdekraft og røring.
       for (let i = 0; i < n; i++) {
         vx[i] += this.gx;
         vy[i] += this.gy;
-        const drag = MATERIALS[mat[i]].drag;
-        if (drag) {
-          vx[i] *= 1 - drag;
-          vy[i] *= 1 - drag;
-        }
       }
       for (const s of this.stirs) {
         const r2 = s.r * s.r;
@@ -389,8 +388,7 @@
           const dy = y[i] - s.y;
           const d2 = dx * dx + dy * dy;
           if (d2 > r2) continue;
-          // Seig væske er tyngre å røre i.
-          const w = (1 - Math.sqrt(d2) / s.r) * (mat[i] === 2 ? 0.12 : 0.35);
+          const w = (1 - Math.sqrt(d2) / s.r) * 0.35;
           vx[i] += (s.dx - vx[i]) * w;
           vy[i] += (s.dy - vy[i]) * w;
         }
@@ -415,10 +413,6 @@
         vy[j] += imp * ny;
       });
 
-      // 2b. Seighet (XSPH-utjevning): honningpartikler tvinges mot naboenes snittfart, så
-      //     klumpen beveger seg nesten samlet og flyter bare langsomt ut.
-      this.smoothVelocities();
-
       // 3. Flytt partiklene, men begrens farten så ingenting «eksploderer».
       const vmax = this.h * 0.6;
       for (let i = 0; i < n; i++) {
@@ -433,7 +427,6 @@
         x[i] += vx[i];
         y[i] += vy[i];
       }
-      this.applySprings();
       this.collide();
 
       // 4. Dobbel tetthetsavslapning (trykk + overflatespenning) og fargeblanding.
@@ -535,107 +528,8 @@
         this.keepInside(i);
         vx[i] = x[i] - px[i];
         vy[i] = y[i] - py[i];
-        const bulk = MATERIALS[mat[i]].bulk;
-        if (bulk) {
-          // Demp utflyting (sideveis) og bevegelse oppover, men la honningen falle fritt –
-          // ellers ser en fallende klump ut til å sveve.
-          const damp = bulk * Math.min(1, Math.max(0, (nbCount[i] - 3) / 6));
-          vx[i] *= 1 - damp;
-          if (vy[i] * this.gy < 0 || this.gy === 0) vy[i] *= 1 - damp;
-        }
-        const stick = MATERIALS[mat[i]].stick;
-        if (stick) {
-          // Seig væske som berører en vegg eller gulvet, mister mesteparten av farten (ikke i taket).
-          const m = 3;
-          if (x[i] < m || x[i] > this.width - m || y[i] > this.height - m) {
-            vx[i] *= 1 - stick;
-            vy[i] *= 1 - stick;
-          }
-        }
       }
       this.drain();
-    }
-
-    /**
-     * Elastiske fjærer mellom naboer i seig væske (Clavet m.fl., avsnitt 5.1–5.2).
-     * Nye naboer får en fjær med dagens avstand som hvilelengde. Strekkes eller trykkes
-     * fjæren mer enn «flytegrensen», gir hvilelengden sakte etter – da siger væsken.
-     */
-    applySprings() {
-      const n = this.count;
-      const { x, y, mat, uid, h } = this;
-      let any = false;
-      for (let i = 0; i < n; i++) if (MATERIALS[mat[i]].spring) { any = true; break; }
-      if (!any) {
-        if (this.springs.size) this.springs.clear();
-        return;
-      }
-      const index = new Map();
-      for (let i = 0; i < n; i++) if (MATERIALS[mat[i]].spring) index.set(uid[i], i);
-      const springs = this.springs;
-      const MAX_SPRINGS = 12000;
-      // Nye fjærer mellom naboer av samme seige væske.
-      this.buildGrid();
-      this.forPairs((i, j, q) => {
-        if (mat[i] !== mat[j] || !MATERIALS[mat[i]].spring || springs.size >= MAX_SPRINGS) return;
-        const a = Math.min(uid[i], uid[j]);
-        const b = Math.max(uid[i], uid[j]);
-        const key = a * 4194304 + b;
-        if (!springs.has(key)) springs.set(key, q * h);
-      });
-      for (const [key, L0] of springs) {
-        const a = Math.floor(key / 4194304);
-        const b = key - a * 4194304;
-        const i = index.get(a);
-        const j = index.get(b);
-        if (i === undefined || j === undefined) { springs.delete(key); continue; }
-        const dx = x[j] - x[i];
-        const dy = y[j] - y[i];
-        const r = Math.hypot(dx, dy);
-        const m = MATERIALS[mat[i]];
-        const gamma = m.yield; // flytegrense (andel av hvilelengden)
-        const alpha = m.plastic; // hvor fort fjæren gir etter
-        let L = L0;
-        const d = gamma * L;
-        if (r > L + d) L += alpha * (r - L - d);
-        else if (r < L - d) L -= alpha * (L - d - r);
-        if (L > h || r > h * 1.5 || r < 1e-4) { springs.delete(key); continue; }
-        springs.set(key, L);
-        // Korriger aldri mer enn knapt halve avviket per side – da kan fjæren ikke overskyte.
-        const D = Math.min(0.5 * m.spring * (1 - L / h), 0.45) * (L - r);
-        const ux = dx / r;
-        const uy = dy / r;
-        x[i] -= D * ux;
-        y[i] -= D * uy;
-        x[j] += D * ux;
-        y[j] += D * uy;
-      }
-    }
-
-    smoothVelocities() {
-      const n = this.count;
-      const { vx, vy, mat } = this;
-      let any = false;
-      for (let i = 0; i < n; i++) if (MATERIALS[mat[i]].smooth) { any = true; break; }
-      if (!any) return;
-      const sx = this.sxBuf && this.sxBuf.length === this.max ? this.sxBuf : (this.sxBuf = new Float32Array(this.max));
-      const sy = this.syBuf && this.syBuf.length === this.max ? this.syBuf : (this.syBuf = new Float32Array(this.max));
-      const sw = this.swBuf && this.swBuf.length === this.max ? this.swBuf : (this.swBuf = new Float32Array(this.max));
-      sx.fill(0, 0, n);
-      sy.fill(0, 0, n);
-      sw.fill(0, 0, n);
-      this.forPairs((i, j, q) => {
-        if (mat[i] !== mat[j] || !MATERIALS[mat[i]].smooth) return;
-        const w = 1 - q;
-        sx[i] += vx[j] * w; sy[i] += vy[j] * w; sw[i] += w;
-        sx[j] += vx[i] * w; sy[j] += vy[i] * w; sw[j] += w;
-      });
-      for (let i = 0; i < n; i++) {
-        const c = MATERIALS[mat[i]].smooth;
-        if (!c || sw[i] === 0) continue;
-        vx[i] += (sx[i] / sw[i] - vx[i]) * c;
-        vy[i] += (sy[i] / sw[i] - vy[i]) * c;
-      }
     }
 
     color(i) {

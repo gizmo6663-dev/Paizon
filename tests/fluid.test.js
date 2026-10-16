@@ -89,24 +89,6 @@ test('olje og vann blander seg ikke, og olje flyter opp', () => {
   assert.ok(mixed / s.count < 0.12, `for mye blanding: ${(100 * mixed / s.count).toFixed(0)} %`);
 });
 
-test('honning er mye seigere enn vann', () => {
-  const width = (liquid) => {
-    const s = new FluidSim({ width: 600, height: 400, max: 500, h: 16 });
-    s.setLiquid(liquid);
-    s.addFaucet(300, 30, 0, 1, 0.6);
-    for (let k = 0; k < 600; k++) {
-      if (k === 300) s.faucets[0].on = false;
-      s.step();
-    }
-    // Bredden på selve haugen (5.–95. persentil), så enkeltsprut ikke teller.
-    const xs = Array.from(s.x.subarray(0, s.count)).sort((a, b) => a - b);
-    return xs[Math.floor(xs.length * 0.95)] - xs[Math.floor(xs.length * 0.05)];
-  };
-  const water = width('vann');
-  const honey = width('honning');
-  assert.ok(honey < water * 0.5, `honning flyter for fort ut: ${honey.toFixed(0)} px mot vann ${water.toFixed(0)} px`);
-});
-
 test('kranen lager væske, og kan skrus av', () => {
   const s = new FluidSim({ width: 400, height: 400, max: 600, h: 16 });
   const f = s.addFaucet(5, 100, 1, 0, 0.5);
@@ -125,18 +107,36 @@ test('kranen lager væske, og kan skrus av', () => {
   assert.ok(strong.count > weak.count * 2);
 });
 
-test('sluket fjerner væske', () => {
-  const s = new FluidSim({ width: 400, height: 400, max: 900, h: 16 });
-  s.fillRect(0, 200, 400, 400, PAINTS.bla.ryb, 600);
-  s.addDrain(200, 395, 25);
-  for (let k = 0; k < 800; k++) s.step();
-  assert.ok(s.count < 50, `${s.count} partikler igjen`);
+test('sluket i bunnen fjerner væske, men ikke med proppen i', () => {
+  const run = (open) => {
+    const s = new FluidSim({ width: 400, height: 400, max: 900, h: 16 });
+    s.fillRect(0, 200, 400, 400, PAINTS.bla.ryb, 600);
+    s.floorDrain.open = open;
+    for (let k = 0; k < 800; k++) s.step();
+    return s.count;
+  };
+  assert.ok(run(true) < 50, 'åpent sluk skal tømme karet');
+  assert.equal(run(false), 600, 'med proppen i skal ingenting renne ut');
+});
+
+test('kranstrålen er tynn', () => {
+  const s = new FluidSim({ width: 400, height: 600, max: 600, h: 20 });
+  s.floorDrain.open = false;
+  s.addFaucet(200, 5, 0, 1, 0.5);
+  for (let k = 0; k < 60; k++) s.step();
+  // Partiklene i strålen (godt over bunnen) skal ligge nesten på rekke.
+  const xs = [];
+  for (let i = 0; i < s.count; i++) if (s.y[i] < 400) xs.push(s.x[i]);
+  assert.ok(xs.length > 20);
+  const spread = Math.max(...xs) - Math.min(...xs);
+  assert.ok(spread < s.h * 0.6, `strålen er ${spread.toFixed(1)} px bred`);
 });
 
 test('væsken trenger ikke inn i hindringer, og skåla holder på vann', () => {
   for (const type of ['kloss', 'planke', 'halvmane', 'skal']) {
     const s = new FluidSim({ width: 500, height: 500, max: 900, h: 16 });
     const o = s.addObstacle(type, 250, 260, type === 'planke' ? 0.4 : 0);
+    s.floorDrain.open = false;
     s.addFaucet(250, 10, 0, 1, 0.5);
     for (let k = 0; k < 500; k++) s.step();
     let inside = 0;

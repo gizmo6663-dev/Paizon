@@ -1,4 +1,4 @@
-/* Væskelek: en ren væskesimulator – rør, hell, bland farger, kraner, skåler og sluk. */
+/* Væskelek: en ren væskesimulator – rør, hell, bland farger, kraner, skåler og sluk i bunnen. */
 (function () {
   'use strict';
 
@@ -8,10 +8,11 @@
   const { $, $$ } = P;
 
   const settings = P.settings('liquid', { tool: 'stir', paint: 'bla', liquid: 'vann', gravity: 'ned' });
+  if (!F.LIQUIDS[settings.liquid]) settings.liquid = 'vann'; // honning finnes ikke lenger
 
   const canvas = $('#liquid-canvas'); // væsken (med «goo»-filter)
   const ctx = canvas.getContext('2d');
-  const top = $('#liquid-objects'); // kraner, hindringer og sluk (skarpe kanter), tar imot fingeren
+  const top = $('#liquid-objects'); // kraner, hindringer og sluket (skarpe kanter), tar imot fingeren
   const tctx = top.getContext('2d');
   const wrap = $('#liquid-world');
   const context = $('#liquid-context');
@@ -25,12 +26,12 @@
   let dpr = 1;
   let pointer = null; // fingeren når den brukes som verktøy i væsken
   let drag = null; // { kind, item, dx, dy, moved, id }
-  let selected = null; // { kind: 'kran' | 'sluk' | 'ting', item }
+  let selected = null; // { kind: 'kran' | 'ting', item }
   let tilt = { x: 0, y: 1 };
   let tiltListening = false;
   let stepsPerFrame = 2;
   const G = 0.2;
-  const LIMITS = { kran: 4, ting: 12, sluk: 3 };
+  const LIMITS = { kran: 4, ting: 12 };
 
   function measure() {
     const r = wrap.getBoundingClientRect();
@@ -57,13 +58,13 @@
   function newSim() {
     const old = sim;
     const h = particleSize();
-    sim = new F.FluidSim({ width: W, height: H, max: MAX_PARTICLES, h });
+    sim = new F.FluidSim({ width: W, height: H, max: MAX_PARTICLES, h, drain: true });
     sim.fillRect(0, H * 0.6, W, H, F.PAINTS.bla.ryb, START_PARTICLES, 0);
     if (old) {
-      // Behold kraner, sluk og ting når vannet fylles på nytt.
+      // Behold kraner, sluket og ting når vannet fylles på nytt.
       sim.obstacles = old.obstacles;
       sim.faucets = old.faucets;
-      sim.drains = old.drains;
+      sim.floorDrain = old.floorDrain;
     }
     // «Goo»-filteret må myke opp i forhold til partikkelstørrelsen.
     $('#goo feGaussianBlur').setAttribute('stdDeviation', (h * 0.32).toFixed(1));
@@ -108,7 +109,9 @@
 
   function drawFluid() {
     ctx.clearRect(0, 0, W, H);
-    const r = sim.h * 0.62;
+    const full = sim.h * 0.62;
+    // Partikler med få naboer (en stråle eller en dråpe) tegnes mindre, så strålen blir tynn.
+    const radius = (i) => full * Math.min(1, 0.45 + Math.max(0, sim.neighbors(i) - 2) * 0.09);
     // Grupper etter farge (avrundet) så vi tegner med få fargebytter.
     const groups = new Map();
     for (let i = 0; i < sim.count; i++) {
@@ -122,6 +125,7 @@
       ctx.fillStyle = g.color;
       ctx.beginPath();
       for (const i of g.list) {
+        const r = radius(i);
         ctx.moveTo(sim.x[i] + r, sim.y[i]);
         ctx.arc(sim.x[i], sim.y[i], r, 0, Math.PI * 2);
       }
@@ -134,7 +138,7 @@
 
   function drawObjects() {
     tctx.clearRect(0, 0, W, H);
-    for (const d of sim.drains) drawDrain(d);
+    drawFloorDrain();
     for (const o of sim.obstacles) drawObstacle(o);
     for (const f of sim.faucets) drawFaucet(f);
     if (selected && selected.kind === 'ting') drawRotateHandle(selected.item);
@@ -201,27 +205,16 @@
     tctx.restore();
   }
 
-  function drawDrain(d) {
+  /** Sluket: en svart strek i bunnen. Med propp i er den grå. */
+  function drawFloorDrain() {
+    const { x0, x1 } = sim.drainSpan();
     tctx.save();
-    tctx.fillStyle = '#4a4e69';
+    tctx.lineCap = 'round';
+    tctx.lineWidth = 7;
+    tctx.strokeStyle = sim.floorDrain.open ? '#1e1e24' : '#9aa0a6';
     tctx.beginPath();
-    tctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-    tctx.fill();
-    tctx.strokeStyle = '#9a8c98';
-    tctx.lineWidth = 3;
-    for (let k = -2; k <= 2; k++) {
-      const off = (k * d.r) / 3;
-      const half = Math.sqrt(Math.max(0, d.r * d.r - off * off)) * 0.8;
-      tctx.beginPath();
-      tctx.moveTo(d.x + off, d.y - half);
-      tctx.lineTo(d.x + off, d.y + half);
-      tctx.stroke();
-    }
-    tctx.lineWidth = 3;
-    tctx.strokeStyle = isSelected(d) ? '#2d3047' : '#22223b';
-    if (isSelected(d)) tctx.setLineDash([6, 5]);
-    tctx.beginPath();
-    tctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+    tctx.moveTo(x0, H - 4);
+    tctx.lineTo(x1, H - 4);
     tctx.stroke();
     tctx.restore();
   }
@@ -323,10 +316,8 @@
     for (let i = sim.faucets.length - 1; i >= 0; i--) {
       if (faucetHit(sim.faucets[i], p)) return { kind: 'kran', item: sim.faucets[i] };
     }
-    for (let i = sim.drains.length - 1; i >= 0; i--) {
-      const d = sim.drains[i];
-      if (Math.hypot(p.x - d.x, p.y - d.y) < d.r + 8) return { kind: 'sluk', item: d };
-    }
+    const span = sim.drainSpan();
+    if (p.y > H - 30 && p.x > span.x0 - 10 && p.x < span.x1 + 10) return { kind: 'sluk', item: sim.floorDrain };
     const o = sim.obstacleAt(p.x, p.y, 10);
     if (o) return { kind: 'ting', item: o };
     return null;
@@ -338,6 +329,12 @@
     const p = toSim(e);
     try { top.setPointerCapture(e.pointerId); } catch (err) { /* ignorer */ }
     const hit = hitTest(p);
+    if (hit && hit.kind === 'sluk') {
+      sim.floorDrain.open = !sim.floorDrain.open;
+      Sound.flip();
+      P.toast(sim.floorDrain.open ? 'Sluket er åpent' : 'Proppen er i sluket');
+      return;
+    }
     if (hit) {
       if (hit.kind !== 'roter') select(hit.kind, hit.item);
       drag = { kind: hit.kind, item: hit.item, dx: p.x - hit.item.x, dy: p.y - hit.item.y, moved: false, id: e.pointerId, sx: p.x, sy: p.y };
@@ -396,7 +393,7 @@
       }
       if (sim.count >= sim.max && !pointer.full) {
         pointer.full = true;
-        P.toast('Nå er det fullt – bruk svampen 🧽 eller et sluk');
+        P.toast('Nå er det fullt – bruk svampen 🧽 eller åpne sluket');
       }
     } else if (settings.tool === 'sponge') {
       sim.removeNear(pointer.x, pointer.y, sim.h * 2.2);
@@ -421,7 +418,7 @@
       strengthInput.value = Math.round(selected.item.strength * 100);
       $('#liquid-toggle').textContent = selected.item.on ? '⏸️ Skru av' : '▶️ Skru på';
     }
-    const names = { kran: 'Kran', sluk: 'Sluk', ting: 'Ting' };
+    const names = { kran: 'Kran', ting: 'Ting' };
     $('#liquid-context-name').textContent = selected.kind === 'ting' ? THING_NAMES[selected.item.type] : names[selected.kind];
   }
 
@@ -446,16 +443,15 @@
     if (!selected) return;
     const { kind, item } = selected;
     if (kind === 'kran') sim.faucets = sim.faucets.filter((f) => f !== item);
-    else if (kind === 'sluk') sim.drains = sim.drains.filter((d) => d !== item);
     else sim.removeObstacle(item);
     Sound.flip();
     select(null);
   });
 
-  /** Legg til en ny kran, et sluk eller en ting, og velg den. */
+  /** Legg til en ny kran eller en ting, og velg den. */
   function addThing(type) {
-    const count = { kran: sim.faucets.length, sluk: sim.drains.length, ting: sim.obstacles.length };
-    const kind = type === 'kran' || type === 'sluk' ? type : 'ting';
+    const count = { kran: sim.faucets.length, ting: sim.obstacles.length };
+    const kind = type === 'kran' ? type : 'ting';
     if (count[kind] >= LIMITS[kind]) {
       P.toast(`Det er plass til ${LIMITS[kind]} – fjern en først`);
       return;
@@ -465,8 +461,6 @@
       item = sim.addFaucet(0, 0, 0, 1, 0.5);
       placeFaucet(item, { x: W * 0.3 + Math.random() * W * 0.4, y: 0 });
       P.toast('Dra kranen langs veggen eller taket. Trykk for av/på.');
-    } else if (type === 'sluk') {
-      item = sim.addDrain(freeSpot(H - sim.h * 1.8), H - sim.h * 1.8, sim.h * 1.6);
     } else {
       const y = H * 0.4;
       item = sim.addObstacle(type, freeSpot(y), y, 0, sim.h * 2);
@@ -476,7 +470,7 @@
 
   /** Finn en x-posisjon langs høyden y som ligger lengst unna tingene som allerede finnes. */
   function freeSpot(y) {
-    const others = [...sim.obstacles.map((o) => ({ x: o.x, y: o.y })), ...sim.drains];
+    const others = sim.obstacles.map((o) => ({ x: o.x, y: o.y }));
     let best = W / 2;
     let bestDist = -1;
     for (let k = 1; k <= 7; k++) {
@@ -559,7 +553,7 @@
       b.classList.toggle('active', on);
       b.setAttribute('aria-pressed', String(on));
     });
-    // Olje og honning har sin egen farge, så malingen gjelder bare vann.
+    // Olje har sin egen farge, så malingen gjelder bare vann.
     $('#liquid-paints').classList.toggle('dim', settings.liquid !== 'vann');
   }
 

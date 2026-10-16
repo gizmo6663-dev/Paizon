@@ -46,13 +46,12 @@ kassen nederst, flytt dem med fingeren og vri dem med ⟲ ⟳. Dra en kloss til 
 ### 💧 Væskelek
 En ren væskesimulator (partikkelbasert, egen kode i `js/fluid.js`). Rør med fingeren, hell inn væske og
 tørk opp med svampen.
-- **Vann, olje og honning** kan være i karet samtidig. Olje og vann blander seg ikke, og olje flyter
-  opp. Honning er tyngst og veldig seig: den renner i en tykk tråd og bygger hauger som siger sakte ut.
+- **Vann og olje** kan være i karet samtidig. De blander seg ikke, og olje flyter opp.
 - **Fargene på vann** blandes som maling – blå og gul blir grønn.
 - **Kraner** sitter på veggene eller i taket og dras dit man vil. Trykk på en kran for å skru den av og
-  på, og juster strålen med glidebryteren. Kranene renner med valgt væske og farge.
+  på, og juster strålen med glidebryteren. Strålen er tynn, og renner med valgt væske og farge.
 - **Skål, halvmåne, planke og kloss** leder væsken. De flyttes fritt og vris med ↻-håndtaket.
-- **Sluk** fjerner væsken som renner ned i det, så kranene kan renne i det uendelige.
+- **Sluket** er den svarte streken i bunnen. Trykk på den for å sette i (eller ta ut) proppen.
 - Tyngdekraften kan peke ned, være av (vektløst) eller styres ved å **vippe telefonen**.
 
 ### Felles
