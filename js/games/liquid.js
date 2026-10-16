@@ -130,6 +130,20 @@
         ctx.arc(sim.x[i], sim.y[i], r, 0, Math.PI * 2);
       }
       ctx.fill();
+      // Dråper i en stråle får en kort stripe bakover langs farten, så de henger sammen
+      // til én tynn stråle i stedet for løse dråper.
+      ctx.strokeStyle = g.color;
+      ctx.lineCap = 'round';
+      for (const i of g.list) {
+        const vx = sim.vx[i];
+        const vy = sim.vy[i];
+        if (sim.neighbors(i) > 4 || vx * vx + vy * vy < 4) continue;
+        ctx.lineWidth = radius(i) * 2;
+        ctx.beginPath();
+        ctx.moveTo(sim.x[i], sim.y[i]);
+        ctx.lineTo(sim.x[i] - vx * 2.2, sim.y[i] - vy * 2.2);
+        ctx.stroke();
+      }
     }
   }
 

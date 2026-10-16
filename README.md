@@ -54,6 +54,19 @@ tørk opp med svampen.
 - **Sluket** er den svarte streken i bunnen. Trykk på den for å sette i (eller ta ut) proppen.
 - Tyngdekraften kan peke ned, være av (vektløst) eller styres ved å **vippe telefonen**.
 
+### 🁢 Domino
+Trykk eller dra med fingeren for å sette opp brikker på bakken eller på planker – dra gir en rad med
+jevn avstand. Trykk 👉 (eller på en brikke) for å dytte, og ↺ for å sette alt opp igjen der det sto.
+Legg ut planker og baller, flytt ting med ✋ og fjern med 🧽.
+- **Fri lek** – så mange brikker du vil.
+- **Ring bjella** (3 nivåer) – flat bakke, ned en trapp, og over et hull som må dekkes med en planke.
+
+### 🎱 Kulebane
+Legg ut planker, korte planker, buer, trakter og trampoliner. Dra for å flytte, vri med ↻, og trykk ▶
+for å slippe kuler fra røret.
+- **Fri bane** – bygg og slipp så mange kuler du vil.
+- **Treff koppen** (4 nivåer) – led kula ned i koppen, også rundt hyller og over en mur.
+
 ### Felles
 - Lyd kan slås av, og alt leses opp med norsk talesyntese når enheten har det
 - 🏠-knappen i spillene må holdes inne i ett sekund, så barnet ikke avslutter ved et uhell
@@ -119,9 +132,10 @@ css/style.css       Utseende
 js/logic.js         Ren spill-logikk (testes med node --test)
 js/media.js         Lydeffekter, bokstavlyder, opptak, opplesning og konfetti
 js/core.js          Felles skall: skjermer, lagring, innstillinger, ferdigskjerm
-js/games/*.js       Ett skript per spill (spell, count, memory, shapes, build, liquid)
+js/games/*.js       Ett skript per spill (spell, count, memory, shapes, build, liquid, domino, marble)
+js/physics-kit.js   Felles hjelpere for domino og kulebane (Matter.js-scene, tegning, nivå klart)
 js/fluid.js         Væskesimulatoren (testes med node --test)
-js/vendor/          Matter.js 0.20.0 (MIT) for byggespillet
+js/vendor/          Matter.js 0.20.0 (MIT) for byggeklosser, domino og kulebane
 sounds/letters/     Bokstavlyder (mp3)
 sw.js               Service worker for offline-bruk
 scripts/build-web.mjs  Kopierer nettappen til www/ (brukes av Capacitor og Pages)

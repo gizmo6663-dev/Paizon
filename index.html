@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#6c5ce7">
-  <meta name="description" content="Paizon – lærerike spill for barn: stave ord, telle, memory, farger og former, byggeklosser og væskelek.">
+  <meta name="description" content="Paizon – lærerike spill for barn: stave ord, telle, memory, farger og former, byggeklosser, væskelek, domino og kulebane.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Paizon">
@@ -62,6 +62,16 @@
           <span class="game-emoji" aria-hidden="true">💧</span>
           <span class="game-name">Væskelek</span>
           <span class="game-desc">Rør, hell og bland farger</span>
+        </button>
+        <button class="game-card" data-go="domino-setup" style="--card: #c0392b">
+          <span class="game-emoji" aria-hidden="true">🁢</span>
+          <span class="game-name">Domino</span>
+          <span class="game-desc">Sett opp brikker og se dem velte</span>
+        </button>
+        <button class="game-card" data-go="marble-setup" style="--card: #8e44ad">
+          <span class="game-emoji" aria-hidden="true">🎱</span>
+          <span class="game-name">Kulebane</span>
+          <span class="game-desc">Bygg en bane for kula</span>
         </button>
       </div>
     </section>
@@ -439,6 +449,107 @@
       </svg>
     </section>
 
+    <!-- ===================== DOMINO: OPPSETT ===================== -->
+    <section id="screen-domino-setup" class="screen" aria-labelledby="domino-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="domino-setup-title">🁢 Domino</h2>
+        </div>
+        <p class="muted">Trykk eller dra med fingeren for å sette opp brikker. Trykk 👉 for å dytte den første!</p>
+        <div class="mode-grid">
+          <button class="mode-card" data-domino="fri">
+            <span class="mode-emoji" aria-hidden="true">🁢</span>
+            <span class="mode-name">Fri lek</span>
+            <span class="mode-desc">Sett opp så mange brikker du vil, med planker og baller.</span>
+          </button>
+          <button class="mode-card" data-domino="utfordring">
+            <span class="mode-emoji" aria-hidden="true">🔔</span>
+            <span class="mode-name">Ring bjella</span>
+            <span class="mode-desc">Få brikkene til å velte helt bort til bjella. 3 nivåer.</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== DOMINO: SPILL ===================== -->
+    <section id="screen-domino" class="screen game-screen fullscreen-game" aria-label="Domino">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="domino-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <p id="domino-goal" class="prompt small" aria-live="polite"></p>
+        <span class="icon-spacer" aria-hidden="true"></span>
+      </div>
+      <div id="domino-world" class="sim-world"><canvas id="domino-canvas"></canvas></div>
+      <div id="domino-tools" class="liquid-toolbar" role="toolbar" aria-label="Verktøy">
+        <div class="tool-group" aria-label="Verktøy">
+          <button data-tool="domino" title="Sett opp brikker">🁢<span>Domino</span></button>
+          <button data-tool="planke" title="Planke">➖<span>Planke</span></button>
+          <button data-tool="ball" title="Ball">⚽<span>Ball</span></button>
+          <button data-tool="flytt" title="Flytt">✋<span>Flytt</span></button>
+          <button data-tool="fjern" title="Fjern">🧽<span>Fjern</span></button>
+        </div>
+        <div class="tool-group" aria-label="Handlinger">
+          <button id="domino-push" class="go" title="Dytt den første brikken">👉<span>Dytt</span></button>
+          <button id="domino-reset" title="Sett opp igjen">↺<span>Opp igjen</span></button>
+          <button id="domino-clear" title="Fjern alt">🗑️<span>Tøm</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== KULEBANE: OPPSETT ===================== -->
+    <section id="screen-marble-setup" class="screen" aria-labelledby="marble-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="marble-setup-title">🎱 Kulebane</h2>
+        </div>
+        <p class="muted">Legg ut planker, buer, trakter og trampoliner. Dra for å flytte, og vri med ↻.</p>
+        <div class="mode-grid">
+          <button class="mode-card" data-marble="fri">
+            <span class="mode-emoji" aria-hidden="true">🎱</span>
+            <span class="mode-name">Fri bane</span>
+            <span class="mode-desc">Bygg din egen kulebane og slipp så mange kuler du vil.</span>
+          </button>
+          <button class="mode-card" data-marble="utfordring">
+            <span class="mode-emoji" aria-hidden="true">🎯</span>
+            <span class="mode-name">Treff koppen</span>
+            <span class="mode-desc">Bygg en bane så kula havner i koppen. 4 nivåer.</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== KULEBANE: SPILL ===================== -->
+    <section id="screen-marble" class="screen game-screen fullscreen-game" aria-label="Kulebane">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="marble-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <p id="marble-goal" class="prompt small" aria-live="polite"></p>
+        <span class="icon-spacer" aria-hidden="true"></span>
+      </div>
+      <div id="marble-world" class="sim-world"><canvas id="marble-canvas"></canvas></div>
+      <div id="marble-tools" class="liquid-toolbar" role="toolbar" aria-label="Verktøy">
+        <div class="tool-group" aria-label="Deler">
+          <button data-tool="planke" title="Planke">➖<span>Planke</span></button>
+          <button data-tool="kort" title="Kort planke">▬<span>Kort</span></button>
+          <button data-tool="bue" title="Bue">⤴️<span>Bue</span></button>
+          <button data-tool="trakt" title="Trakt">🔻<span>Trakt</span></button>
+          <button data-tool="sprett" title="Trampoline">🔴<span>Trampoline</span></button>
+          <button data-tool="flytt" title="Flytt">✋<span>Flytt</span></button>
+        </div>
+        <div class="tool-group" aria-label="Handlinger">
+          <button id="marble-go" class="go" title="Slipp en kule">▶️<span>Slipp kule</span></button>
+          <button id="marble-clear" title="Fjern kulene">↺<span>Nye kuler</span></button>
+          <button id="marble-remove" title="Fjern valgt del" disabled>🗑️<span>Fjern del</span></button>
+        </div>
+      </div>
+    </section>
+
     <!-- ===================== FERDIG (felles) ===================== -->
     <section id="screen-done" class="screen" aria-labelledby="done-title">
       <div class="panel center">
@@ -455,6 +566,19 @@
     </section>
   </main>
 
+  <!-- Felles «nivå klart» for domino og kulebane. -->
+  <div id="phys-done" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="phys-done-title">
+    <div class="overlay-card">
+      <div class="done-picture" aria-hidden="true">🏆</div>
+      <div id="phys-done-title" class="done-word"></div>
+      <p id="phys-done-text" class="done-praise"></p>
+      <div class="overlay-actions">
+        <button id="phys-stay" class="btn">👀 Se på</button>
+        <button id="phys-next" class="btn primary">Neste nivå ➜</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <canvas id="confetti" aria-hidden="true"></canvas>
 
@@ -469,6 +593,9 @@
   <script src="js/games/shapes.js"></script>
   <script src="js/games/build.js"></script>
   <script src="js/games/liquid.js"></script>
+  <script src="js/physics-kit.js"></script>
+  <script src="js/games/domino.js"></script>
+  <script src="js/games/marble.js"></script>
   <script src="js/start.js"></script>
 </body>
 </html>
