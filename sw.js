@@ -1,16 +1,20 @@
 /* Enkel service worker: gjør appen tilgjengelig uten nett etter første besøk. */
-const CACHE = 'paizon-v5';
+const CACHE = 'paizon-v6';
 const ASSETS = [
   './',
   'index.html',
   'css/style.css',
+  'js/vendor/matter.min.js',
   'js/logic.js',
+  'js/fluid.js',
   'js/media.js',
   'js/core.js',
   'js/games/spell.js',
   'js/games/count.js',
   'js/games/memory.js',
   'js/games/shapes.js',
+  'js/games/build.js',
+  'js/games/liquid.js',
   'js/start.js',
   'manifest.webmanifest',
   'icons/icon.svg',

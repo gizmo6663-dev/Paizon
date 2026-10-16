@@ -58,6 +58,9 @@
     wrong() { tone(260, 0, 0.18, 'triangle', 0.1); tone(200, 0.12, 0.22, 'triangle', 0.08); },
     hint() { tone(988, 0, 0.1, 'sine', 0.08); tone(1318, 0.08, 0.15, 'sine', 0.06); },
     flip() { tone(700, 0, 0.06, 'sine', 0.05); },
+    /** Kloss som treffer noe; styrke 0–1. */
+    knock(strength) { tone(140 + Math.random() * 60, 0, 0.09, 'triangle', 0.04 + 0.12 * (strength || 0.5)); },
+    rumble() { for (let i = 0; i < 8; i++) tone(55 + Math.random() * 25, i * 0.25, 0.4, 'sawtooth', 0.05); },
     win() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, i * 0.11, 0.35, 'triangle', 0.13)); },
     isMuted: () => muted,
     setMuted(value) {

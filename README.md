@@ -35,6 +35,19 @@ Ordet kan vises under bildet og leses opp når kortet snus – en fin kobling ti
 Appen sier for eksempel «Finn den røde sirkelen» eller «Finn det gule hjertet». Øv på farger,
 former eller begge. Trykker barnet feil, forteller appen hva det trykket på («Det er en blå trekant»).
 
+### 🧱 Byggeklosser
+Fysikk med [Matter.js](https://brm.io/matter-js/): dra klosser, planker, søyler, trekanter og baller inn fra
+kassen nederst, flytt dem med fingeren og vri dem med ⟲ ⟳. Dra en kloss til 🗑️ for å fjerne den.
+- **Fri bygging** – bygg hva du vil, og test byggverket med 🌋 jordskjelv.
+- **Høyt tårn** – bygg opp til streken og få tårnet til å stå stødig i to sekunder (3 nivåer).
+- **Bygg en bro** – bygg over kløften og trykk ▶; kula triller av seg selv og må komme over til flagget.
+  Nivå 3 krever en søyle i kløften.
+
+### 💧 Væskelek
+En ren væskesimulator (partikkelbasert, egen kode i `js/fluid.js`). Rør med fingeren, hell inn maling,
+tørk opp med svampen, og bytt mellom vann, olje og honning. Fargene blandes som maling – blå og gul blir
+grønn. Tyngdekraften kan peke ned, være av (vektløst) eller styres ved å **vippe telefonen**.
+
 ### Felles
 - Lyd kan slås av, og alt leses opp med norsk talesyntese når enheten har det
 - 🏠-knappen i spillene må holdes inne i ett sekund, så barnet ikke avslutter ved et uhell
@@ -100,7 +113,9 @@ css/style.css       Utseende
 js/logic.js         Ren spill-logikk (testes med node --test)
 js/media.js         Lydeffekter, bokstavlyder, opptak, opplesning og konfetti
 js/core.js          Felles skall: skjermer, lagring, innstillinger, ferdigskjerm
-js/games/*.js       Ett skript per spill (spell, count, memory, shapes)
+js/games/*.js       Ett skript per spill (spell, count, memory, shapes, build, liquid)
+js/fluid.js         Væskesimulatoren (testes med node --test)
+js/vendor/          Matter.js 0.20.0 (MIT) for byggespillet
 sounds/letters/     Bokstavlyder (mp3)
 sw.js               Service worker for offline-bruk
 scripts/build-web.mjs  Kopierer nettappen til www/ (brukes av Capacitor og Pages)

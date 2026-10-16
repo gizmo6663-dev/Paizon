@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#6c5ce7">
-  <meta name="description" content="Paizon – lærerike spill for barn: stave ord, telle, memory og farger og former.">
+  <meta name="description" content="Paizon – lærerike spill for barn: stave ord, telle, memory, farger og former, byggeklosser og væskelek.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Paizon">
@@ -52,6 +52,16 @@
           <span class="game-emoji" aria-hidden="true">🎨</span>
           <span class="game-name">Farger og former</span>
           <span class="game-desc">Finn riktig farge og form</span>
+        </button>
+        <button class="game-card" data-go="build-setup" style="--card: #d35400">
+          <span class="game-emoji" aria-hidden="true">🧱</span>
+          <span class="game-name">Byggeklosser</span>
+          <span class="game-desc">Bygg tårn og broer med ekte fysikk</span>
+        </button>
+        <button class="game-card" data-start="liquid" style="--card: #0097a7">
+          <span class="game-emoji" aria-hidden="true">💧</span>
+          <span class="game-name">Væskelek</span>
+          <span class="game-desc">Rør, hell og bland farger</span>
         </button>
       </div>
     </section>
@@ -299,6 +309,117 @@
       </div>
     </section>
 
+    <!-- ===================== BYGGEKLOSSER: OPPSETT ===================== -->
+    <section id="screen-build-setup" class="screen" aria-labelledby="build-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="build-setup-title">🧱 Byggeklosser</h2>
+        </div>
+        <p class="muted">Dra klosser inn fra kassen nederst. Tyngdekraften virker – bygg stødig!</p>
+        <div class="mode-grid">
+          <button class="mode-card" data-build="fri">
+            <span class="mode-emoji" aria-hidden="true">🏗️</span>
+            <span class="mode-name">Fri bygging</span>
+            <span class="mode-desc">Bygg hva du vil – og test det med jordskjelv.</span>
+          </button>
+          <button class="mode-card" data-build="tarn">
+            <span class="mode-emoji" aria-hidden="true">🗼</span>
+            <span class="mode-name">Høyt tårn</span>
+            <span class="mode-desc">Bygg opp til streken, og få tårnet til å stå. 3 nivåer.</span>
+          </button>
+          <button class="mode-card" data-build="bro">
+            <span class="mode-emoji" aria-hidden="true">🌉</span>
+            <span class="mode-name">Bygg en bro</span>
+            <span class="mode-desc">Hjelp kula over kløften til flagget. 3 nivåer.</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== BYGGEKLOSSER: SPILL ===================== -->
+    <section id="screen-build" class="screen game-screen fullscreen-game" aria-label="Byggeklosser">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="build-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <p id="build-goal" class="prompt small" aria-live="polite"></p>
+        <div class="game-actions">
+          <button id="build-play" class="icon-btn accent" aria-label="Slipp kula" title="Slipp kula">▶</button>
+          <button id="build-shake" class="icon-btn" aria-label="Jordskjelv" title="Jordskjelv">🌋</button>
+          <button id="build-reset" class="icon-btn" aria-label="Fjern alle klossene" title="Start på nytt">↺</button>
+        </div>
+      </div>
+      <div id="build-world" class="sim-world"><canvas id="build-canvas"></canvas></div>
+      <div class="build-bar">
+        <div id="build-palette" class="palette" role="toolbar" aria-label="Klosser – dra dem inn"></div>
+        <div class="build-tools" role="toolbar" aria-label="Valgt kloss">
+          <button class="icon-btn build-rotate" data-deg="-15" aria-label="Vri mot venstre" disabled>⟲</button>
+          <button class="icon-btn build-rotate" data-deg="15" aria-label="Vri mot høyre" disabled>⟳</button>
+          <button id="build-trash" class="icon-btn trash" aria-label="Søppelkasse – dra en kloss hit">🗑️</button>
+        </div>
+      </div>
+      <div id="build-done" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="build-done-title">
+        <div class="overlay-card">
+          <div class="done-picture" aria-hidden="true">🏆</div>
+          <div id="build-done-title" class="done-word"></div>
+          <p id="build-done-text" class="done-praise"></p>
+          <div class="overlay-actions">
+            <button id="build-stay" class="btn">👀 Se på</button>
+            <button id="build-next" class="btn primary">Neste nivå ➜</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== VÆSKELEK ===================== -->
+    <section id="screen-liquid" class="screen game-screen fullscreen-game" aria-label="Væskelek">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="home" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <p class="prompt small">Bland blå og gul – hva skjer? 💧</p>
+        <span class="icon-spacer" aria-hidden="true"></span>
+      </div>
+      <div id="liquid-world" class="sim-world liquid-world"><canvas id="liquid-canvas"></canvas></div>
+      <div id="liquid-toolbar" class="liquid-toolbar" role="toolbar" aria-label="Verktøy">
+        <div class="tool-group" aria-label="Verktøy">
+          <button data-set="tool:stir" title="Rør">✋<span>Rør</span></button>
+          <button data-set="tool:pour" title="Hell">🫗<span>Hell</span></button>
+          <button data-set="tool:sponge" title="Svamp">🧽<span>Svamp</span></button>
+        </div>
+        <div class="tool-group" id="liquid-paints" aria-label="Farge">
+          <button data-set="paint:bla" class="paint" style="--paint:#2a5f99" aria-label="Blå"></button>
+          <button data-set="paint:rod" class="paint" style="--paint:#ff0000" aria-label="Rød"></button>
+          <button data-set="paint:gul" class="paint" style="--paint:#ffff00" aria-label="Gul"></button>
+          <button data-set="paint:hvit" class="paint" style="--paint:#ffffff" aria-label="Hvit"></button>
+        </div>
+        <div class="tool-group" aria-label="Væske">
+          <button data-set="liquid:vann">💧<span>Vann</span></button>
+          <button data-set="liquid:olje">🫒<span>Olje</span></button>
+          <button data-set="liquid:honning">🍯<span>Honning</span></button>
+        </div>
+        <div class="tool-group" aria-label="Tyngdekraft">
+          <button data-set="gravity:ned">⬇️<span>Ned</span></button>
+          <button data-set="gravity:vipp">📱<span>Vipp</span></button>
+          <button data-set="gravity:av">🪐<span>Vektløs</span></button>
+        </div>
+        <div class="tool-group">
+          <button id="liquid-clear">🔄<span>Nytt vann</span></button>
+          <button id="liquid-empty">🫙<span>Tøm</span></button>
+        </div>
+      </div>
+      <!-- «Goo»-filter: myker opp og smelter partiklene sammen til en flytende overflate. -->
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <filter id="goo">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur"/>
+          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9"/>
+        </filter>
+      </svg>
+    </section>
+
     <!-- ===================== FERDIG (felles) ===================== -->
     <section id="screen-done" class="screen" aria-labelledby="done-title">
       <div class="panel center">
@@ -318,13 +439,17 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <canvas id="confetti" aria-hidden="true"></canvas>
 
+  <script src="js/vendor/matter.min.js"></script>
   <script src="js/logic.js"></script>
+  <script src="js/fluid.js"></script>
   <script src="js/media.js"></script>
   <script src="js/core.js"></script>
   <script src="js/games/spell.js"></script>
   <script src="js/games/count.js"></script>
   <script src="js/games/memory.js"></script>
   <script src="js/games/shapes.js"></script>
+  <script src="js/games/build.js"></script>
+  <script src="js/games/liquid.js"></script>
   <script src="js/start.js"></script>
 </body>
 </html>
