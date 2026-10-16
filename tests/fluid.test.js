@@ -145,9 +145,19 @@ test('væsken trenger ikke inn i hindringer, og skåla holder på vann', () => {
     if (type === 'halvmane' || type === 'skal') {
       s.faucets[0].on = false;
       for (let k = 0; k < 300; k++) s.step();
-      let held = 0;
-      for (let i = 0; i < s.count; i++) if (Math.hypot(s.x[i] - o.x, s.y[i] - o.y) < o.r && s.y[i] > o.y - 10) held++;
-      assert.ok(held > 30, `${type} holder bare ${held} partikler`);
+      const inBowl = (sim) => {
+        let n = 0;
+        for (let i = 0; i < sim.count; i++) if (Math.hypot(sim.x[i] - o.x, sim.y[i] - o.y) < o.r && sim.y[i] > o.y - 10) n++;
+        return n;
+      };
+      // Samme scene uten skål: der renner alt rett gjennom området.
+      const empty = new FluidSim({ width: 500, height: 500, max: 900, h: 16 });
+      empty.addFaucet(250, 10, 0, 1, 0.5);
+      for (let k = 0; k < 500; k++) empty.step();
+      empty.faucets[0].on = false;
+      for (let k = 0; k < 300; k++) empty.step();
+      const held = inBowl(s);
+      assert.ok(held >= 20 && held > inBowl(empty) + 15, `${type} holder bare ${held} partikler (uten skål: ${inBowl(empty)})`);
     }
   }
 });
