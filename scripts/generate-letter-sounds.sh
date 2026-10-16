@@ -3,8 +3,8 @@
 # Krever: espeak-ng (med norsk bokmål-stemme) og ffmpeg.  Bruk: scripts/generate-letter-sounds.sh
 #
 # Kan justeres med miljøvariabler:
-#   VOICE  espeak-ng-stemme og variant (standard nb+f3, en lys kvinnestemme)
-#   PITCH  tonehøyde 0–99 (standard 65)
+#   VOICE  espeak-ng-stemme og variant (standard nb+Annie, en myk kvinnestemme)
+#   PITCH  tonehøyde 0–99 (standard 60)
 #   SPEED  ord per minutt (standard 120)
 #   OUT    mappe for lydfilene (standard sounds/letters)
 #
@@ -13,8 +13,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 OUT=${OUT:-sounds/letters}
-VOICE=${VOICE:-nb+f3}
-PITCH=${PITCH:-65}
+VOICE=${VOICE:-nb+Annie}
+PITCH=${PITCH:-60}
 SPEED=${SPEED:-120}
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT

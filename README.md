@@ -43,7 +43,7 @@ former eller begge. Trykker barnet feil, forteller appen hva det trykket på («
 ## Bokstavlydene
 
 Lydfilene i `sounds/letters/` er laget med [espeak-ng](https://github.com/espeak-ng/espeak-ng) sin
-norske stemme (lys kvinnevariant, `nb+f3`) ut fra fonemer, slik at de blir lyder og ikke bokstavnavn. De lages på nytt med:
+norske stemme (myk kvinnevariant, `nb+Annie`) ut fra fonemer, slik at de blir lyder og ikke bokstavnavn. De lages på nytt med:
 
 ```bash
 scripts/generate-letter-sounds.sh   # krever espeak-ng og ffmpeg
