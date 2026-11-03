@@ -271,6 +271,14 @@
       sub.tx = zx;
       sub.ty = clamp(sub.y + (rnd() - 0.45) * 1, 0.08, D.seabedAt(zx) - 0.12);
     }
+    // Så lenge fingeren holdes på skjermen, styrer ubåten mot det stedet fingeren peker på nå –
+    // også når kameraet flytter seg og fingeren står stille. Da stopper den ikke opp underveis.
+    const steering = pointer && !pinch && (pointer.moved || (!pointer.hit && !pointer.place));
+    if (steering) {
+      const p = toWorld({ clientX: pointer.cx, clientY: pointer.cy });
+      sub.tx = p.x;
+      sub.ty = p.y;
+    }
     if (sub.tx != null) {
       const dx = sub.tx - sub.x;
       const dy = sub.ty - sub.y;
@@ -278,7 +286,7 @@
       if (dist < 0.01 && !pointer) {
         sub.tx = null;
       } else {
-        const want = Math.min(maxSpeed, dist * 2.2);
+        const want = Math.min(maxSpeed, dist * (steering ? 3.5 : 2.2));
         sub.vx += ((dx / (dist || 1)) * want - sub.vx) * Math.min(1, dt * 3);
         sub.vy += ((dy / (dist || 1)) * want - sub.vy) * Math.min(1, dt * 3);
       }
@@ -392,10 +400,9 @@
   /** Dyr langt borte: små, blasse silhuetter som beveger seg saktere enn alt foran (parallakse). */
   function drawFarLife(dt) {
     const par = 0.55;
-    const d = D.depthAt(cam.y + (H / S) * 0.5);
-    const c = mix(waterColor(d), [0, 0, 0], 0.25);
-    const q = (v) => Math.round(v / 8) * 8; // færre ulike farger = færre ferdigtegnede bilder
-    const color = rgb([q(c[0]), q(c[1]), q(c[2])]);
+    // Fast farge: silhuettene tegnes én gang per dyr og størrelse (ellers fylles bildelageret
+    // opp mens man dykker, og må tegnes på nytt – det ga små hakk).
+    const color = '#06202e';
     for (const f of farLife) {
       f.x += f.dir * f.speed * dt;
       if (f.x < 0 || f.x > D.WORLD.width) f.dir *= -1;
@@ -404,8 +411,8 @@
       const py = (f.y - cam.y * par - (H / S) * (1 - par) * 0.4) * S;
       const L = f.size * S;
       if (px < -L * 3 || px > W + L * 3 || py < -L * 2 || py > H + L * 2) continue;
-      const img = A.silhouette(f.kind, Math.max(6, Math.round(L / 4) * 4), color);
-      ctx.globalAlpha = 0.55;
+      const img = A.silhouette(f.kind, Math.max(8, Math.round(L / 8) * 8), color);
+      ctx.globalAlpha = 0.32;
       const n = f.school || 1;
       for (let i = 0; i < n; i++) {
         const ox = n > 1 ? Math.sin(i * 2.4 + f.ph) * L * 2.2 : 0;
@@ -1190,7 +1197,7 @@
     const place = placeAt(p);
     // En fisk som tilfeldigvis svømmer forbi inngangen, skal ikke ta trykket fra grotta.
     if (hit && place && lastHitDist > 0.45) hit = null;
-    pointer = { id: e.pointerId, x0: p.px, y0: p.py, moved: false, hit, place: hit ? null : place };
+    pointer = { id: e.pointerId, x0: p.px, y0: p.py, cx: e.clientX, cy: e.clientY, moved: false, hit, place: hit ? null : place };
     if (!pointer.hit && !pointer.place) {
       sub.tx = p.x;
       sub.ty = p.y;
@@ -1207,6 +1214,8 @@
     if (!pointer || e.pointerId !== pointer.id) return;
     lastInput = time;
     const p = toWorld(e);
+    pointer.cx = e.clientX;
+    pointer.cy = e.clientY;
     if (Math.hypot(p.px - pointer.x0, p.py - pointer.y0) > 10) pointer.moved = true;
     if (pointer.moved) {
       sub.tx = p.x;

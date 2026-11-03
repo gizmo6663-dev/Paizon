@@ -39,12 +39,12 @@
    */
   const SPECIES = [
     {
-      key: 'elg', name: 'Elg', sci: 'Alces alces', kind: 'elg', place: 'ground', x: [14, 22], size: 0.42, count: 1, move: 0.05,
+      key: 'elg', name: 'Elg', sci: 'Alces alces', kind: 'elg', place: 'ground', x: [14, 22], size: 0.3, count: 1, move: 0.05,
       when: { times: ['morgen', 'dag', 'kveld'] },
       facts: 'Elgen er det største dyret i den norske skogen – en voksen elgokse kan bli over to meter høy. Den spiser blader, kvister og bark. Hvert år feller oksen geviret sitt og får et nytt og enda større.',
     },
     {
-      key: 'raadyr', name: 'Rådyr', sci: 'Capreolus capreolus', kind: 'raadyr', place: 'ground', x: [4, 13], size: 0.28, count: 2, move: 0.06, shy: true,
+      key: 'raadyr', name: 'Rådyr', sci: 'Capreolus capreolus', kind: 'raadyr', place: 'ground', x: [4, 13], size: 0.22, count: 2, move: 0.06, shy: true,
       when: { times: ['morgen', 'kveld'] },
       facts: 'Rådyret er et lite og forsiktig hjortedyr. Om sommeren er pelsen rødbrun, og om vinteren blir den grå. Når rådyret blir redd, viser det fram den hvite flekken bak og løper av gårde i lange byks.',
     },
@@ -163,7 +163,7 @@
       facts: 'Gaupa er Norges eneste ville kattedyr. Den har dusker på ørene og store poter som fungerer som truger i snøen. Gaupa er så sky at mange som bor i skogen aldri har sett en.',
     },
     {
-      key: 'bjorn', name: 'Brunbjørn', sci: 'Ursus arctos', kind: 'bjorn', place: 'ground', x: [22, 25.5], size: 0.45, count: 1, move: 0.03, secret: true,
+      key: 'bjorn', name: 'Brunbjørn', sci: 'Ursus arctos', kind: 'bjorn', place: 'ground', x: [22, 25.5], size: 0.32, count: 1, move: 0.03, secret: true,
       when: { times: ['morgen', 'kveld'], seasons: AWAKE },
       facts: 'Brunbjørnen er det største rovdyret i Norge, men den spiser mest bær, gress og maur. Om vinteren sover den i et hi i mange måneder. Bjørnungene blir født mens mora sover!',
     },

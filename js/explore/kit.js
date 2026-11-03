@@ -49,8 +49,15 @@
   /** Tegn noe én gang til et eget lerret og gjenbruk det. */
   function sprite(key, w, h, draw) {
     const id = `${key}:${Math.round(w)}x${Math.round(h)}`;
+    const hit = sprites.get(id);
+    if (hit) {
+      // Sist brukt havner bakerst, så det er de eldste som fjernes når lageret er fullt.
+      sprites.delete(id);
+      sprites.set(id, hit);
+      return hit;
+    }
     if (!sprites.has(id)) {
-      if (sprites.size > 500) sprites.clear();
+      if (sprites.size > 700) sprites.delete(sprites.keys().next().value);
       const c = document.createElement('canvas');
       c.width = Math.max(2, Math.round(w));
       c.height = Math.max(2, Math.round(h));
@@ -59,6 +66,49 @@
     }
     return sprites.get(id);
   }
+  /**
+   * Hvor stor blir en tegning egentlig? Tegner den én gang med L = 100 på et prøvelerret og
+   * finner ytterkanten av alt som ble tegnet. Brukes til å få dyret til å passe i et bilde.
+   * Svar: { x, y, w, h } i samme mål som L = 100, med origo der tegningen har sitt origo.
+   */
+  const boxes = new Map();
+  function measure(key, draw) {
+    if (boxes.has(key)) return boxes.get(key);
+    const N = 400;
+    const c = document.createElement('canvas');
+    c.width = c.height = N;
+    const x = c.getContext('2d');
+    x.translate(N / 2, N / 2);
+    draw(x, 100);
+    const d = x.getImageData(0, 0, N, N).data;
+    let x0 = N;
+    let y0 = N;
+    let x1 = 0;
+    let y1 = 0;
+    for (let yy = 0; yy < N; yy += 2) {
+      for (let xx = 0; xx < N; xx += 2) {
+        if (d[(yy * N + xx) * 4 + 3] > 12) {
+          if (xx < x0) x0 = xx;
+          if (xx > x1) x1 = xx;
+          if (yy < y0) y0 = yy;
+          if (yy > y1) y1 = yy;
+        }
+      }
+    }
+    const box = x1 > x0 ? { x: x0 - N / 2, y: y0 - N / 2, w: x1 - x0 + 2, h: y1 - y0 + 2 } : { x: -50, y: -50, w: 100, h: 100 };
+    boxes.set(key, box);
+    return box;
+  }
+  /** Tegn draw(ctx, L) slik at den fyller rammen (w × h) med litt luft rundt. */
+  function drawFitted(ctx, w, h, key, draw, fill) {
+    const box = measure(key, draw);
+    const k = Math.min((w * (fill || 0.82)) / box.w, (h * (fill || 0.82)) / box.h);
+    ctx.save();
+    ctx.translate(w / 2 - (box.x + box.w / 2) * k, h / 2 - (box.y + box.h / 2) * k);
+    draw(ctx, 100 * k);
+    ctx.restore();
+  }
+
   function el(tag, cls, html) {
     const e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -671,5 +721,5 @@
     };
   }
 
-  window.PaizonExplore = { TAU, clamp, lerp, hexRgb, shade, mixHex, lin, rad, seeded, sprite, el, Card, Album, Banner, Sleep, makeAudio };
+  window.PaizonExplore = { TAU, clamp, lerp, hexRgb, shade, mixHex, lin, rad, seeded, sprite, measure, drawFitted, el, Card, Album, Banner, Sleep, makeAudio };
 })();

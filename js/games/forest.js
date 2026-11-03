@@ -167,19 +167,23 @@
 
   // ---------- Oppdatering ----------
   function updateWalker(dt) {
+    // Holder man fingeren på skjermen, går oppdageren mot fingeren hele tiden – også når
+    // kameraet flytter seg og fingeren står stille.
+    if (pointer && (pointer.moved || !pointer.hit)) walker.tx = clamp(toWorld({ clientX: pointer.cx, clientY: pointer.cy }).x, 0.3, D.WORLD.width - 0.3);
     if (mode === 'rolig' && !pointer && time - lastInput > 5 && walker.tx == null) {
       walker.tx = clamp(walker.x + (walker.x > D.WORLD.width - 3 ? -1 : walker.x < 3 ? 1 : walker.dir) * (2 + rnd() * 3), 0.4, D.WORLD.width - 0.4);
     }
     if (walker.tx != null) {
       const dx = walker.tx - walker.x;
       if (Math.abs(dx) < 0.02) {
-        walker.tx = null;
+        if (!pointer) walker.tx = null;
       } else {
         walker.dir = Math.sign(dx);
         walker.x += Math.sign(dx) * Math.min(Math.abs(dx), dt * (mode === 'rolig' ? 0.18 : 0.32));
       }
     }
-    walker.walking += ((walker.tx != null ? 1 : 0) - walker.walking) * Math.min(1, dt * 6);
+    const step = walker.tx != null && Math.abs(walker.tx - walker.x) >= 0.02;
+    walker.walking += ((step ? 1 : 0) - walker.walking) * Math.min(1, dt * 6);
     walker.x = clamp(walker.x, 0.3, D.WORLD.width - 0.3);
   }
 
@@ -367,18 +371,43 @@
     }
   }
 
+  /*
+   * Trærne tegnes ferdig i noen faste størrelser og skaleres når de vises. Da blir det få
+   * ferdigtegnede bilder, og de kan lages på forhånd (se warmUp) i stedet for midt i turen –
+   * det var det som fikk oppdageren til å hakke når nye trær kom inn i bildet.
+   */
+  const TREE_SIZES = [0.3, 0.45, 0.62, 0.85, 1.1, 1.45];
+  const bucket = (h) => TREE_SIZES.reduce((b, v) => (Math.abs(v - h) < Math.abs(b - h) ? v : b), TREE_SIZES[0]);
+  function treeImg(type, h, variant) {
+    const px = Math.round(bucket(h) * S / 4) * 4;
+    return type === 'gran' ? FA.spruce(px, season, variant) : type === 'bjork' ? FA.birch(px, season, variant) : FA.pine(px, season, variant);
+  }
+  let warmQueue = [];
+  function warmUp() {
+    const set = new Map();
+    for (const t of trees.concat(midTrees)) set.set(`${t.type}|${bucket(t.h)}|${t.variant}`, t);
+    warmQueue = [...set.values()];
+  }
+  function warmStep() {
+    // Tegn noen få trær per bilde, så det aldri blir et merkbart hakk.
+    const t0 = performance.now();
+    while (warmQueue.length && performance.now() - t0 < 6) {
+      const t = warmQueue.shift();
+      treeImg(t.type, t.h, t.variant);
+    }
+  }
+
   function drawTree(t) {
     const x = sx(t.x);
     const hpx = t.h * S;
     if (x < -hpx || x > W + hpx) return;
-    const img = t.type === 'gran' ? FA.spruce(Math.round(hpx / 8) * 8, season, t.variant)
-      : t.type === 'bjork' ? FA.birch(Math.round(hpx / 8) * 8, season, t.variant)
-        : FA.pine(Math.round(hpx / 8) * 8, season, t.variant);
+    const img = treeImg(t.type, t.h, t.variant);
+    const k = hpx / img.height;
     const sway = Math.sin(time * 0.5 + t.x) * 0.006;
     ctx.save();
     ctx.translate(x, gy(t.x) + 2);
     ctx.transform(1, 0, sway, 1, 0, 0);
-    ctx.drawImage(img, -img.width / 2, -img.height);
+    ctx.drawImage(img, -img.width * k / 2, -hpx, img.width * k, hpx);
     ctx.restore();
   }
 
@@ -395,8 +424,9 @@
       const x = (t.x - cam.x * par) * S;
       const hpx = t.h * S;
       if (x < -hpx || x > W + hpx) continue;
-      const img = t.type === 'gran' ? FA.spruce(Math.round(hpx / 8) * 8, season, t.variant) : FA.birch(Math.round(hpx / 8) * 8, season, t.variant);
-      mctx.drawImage(img, x - img.width / 2, H * 0.74 - img.height);
+      const img = treeImg(t.type, t.h, t.variant);
+      const k = hpx / img.height;
+      mctx.drawImage(img, x - img.width * k / 2, H * 0.74 - hpx, img.width * k, hpx);
     }
     mctx.globalCompositeOperation = 'source-atop';
     mctx.fillStyle = mixHex(sky.haze, '#000000', 0.05);
@@ -801,6 +831,7 @@
     const dt = Math.min(0.05, last ? (now - last) / 1000 : 0.016);
     last = now;
     time += dt;
+    warmStep();
     updateWalker(dt);
     updateAnimals(dt);
     updateCamera(dt);
@@ -910,15 +941,16 @@
     lastInput = time;
     if (sleep.sleeping) return;
     const p = toWorld(e);
-    pointer = { id: e.pointerId, x0: e.clientX, moved: false, hit: hitTest(p) };
+    pointer = { id: e.pointerId, x0: e.clientX, cx: e.clientX, cy: e.clientY, moved: false, hit: hitTest(p) };
     try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignorer */ }
     if (!pointer.hit) walker.tx = clamp(p.x, 0.3, D.WORLD.width - 0.3);
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!pointer || e.pointerId !== pointer.id) return;
     lastInput = time;
+    pointer.cx = e.clientX;
+    pointer.cy = e.clientY;
     if (Math.abs(e.clientX - pointer.x0) > 10) pointer.moved = true;
-    if (pointer.moved) walker.tx = clamp(toWorld(e).x, 0.3, D.WORLD.width - 0.3);
   });
   canvas.addEventListener('pointerup', (e) => {
     if (!pointer || e.pointerId !== pointer.id) return;
@@ -1007,13 +1039,11 @@
       c.restore();
       return;
     }
-    const big = ['elg', 'raadyr', 'rev', 'grevling', 'gaupe', 'bjorn', 'hare'].includes(sp.kind);
-    const air = sp.place === 'air';
-    const L = big ? Math.min(w * 0.62, h * 1.15) : air ? Math.min(w, h) * 0.55 : Math.min(w * 0.5, h * 0.75);
-    c.translate(w / 2 - (big ? L * 0.08 : 0), air ? h * 0.45 : h * 0.86);
-    if (sp.kind === 'spett') c.translate(-L * 0.2, -h * 0.3);
-    C.ART[sp.kind](c, L, t, { winter: !thumb && season === 'vinter', pose: air ? 'fly' : 'perch', gait: big && !thumb ? 0.6 : 0 });
     c.restore();
+    // Dyret skaleres slik at det alltid passer i bildet, uansett hvor stort det er.
+    const air = sp.place === 'air';
+    const opts = { winter: !thumb && season === 'vinter', pose: air ? 'fly' : 'perch', gait: 0 };
+    X.drawFitted(c, w, h, `forest-${sp.kind}-${opts.winter ? 'v' : 's'}`, (cx, L) => C.ART[sp.kind](cx, L, t, opts), thumb ? 0.86 : 0.8);
   }
 
   // ---------- Knapper ----------
@@ -1029,6 +1059,7 @@
     if (k === season) return;
     season = k;
     placeAnimals();
+    warmUp();
     renderControls();
     if (mode !== 'rolig') banner.show(D.SEASONS.find((s) => s.key === k).name);
   }
@@ -1098,6 +1129,7 @@
     foundIn.clear();
     buildWorld();
     placeAnimals();
+    warmUp();
     walker.x = 1.2;
     walker.tx = null;
     walker.dir = 1;

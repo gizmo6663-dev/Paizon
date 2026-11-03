@@ -937,8 +937,15 @@
   const spriteCache = new Map();
   function sprite(key, w, h, draw) {
     const id = `${key}:${Math.round(w)}x${Math.round(h)}`;
+    const hit = spriteCache.get(id);
+    if (hit) {
+      // Sist brukt havner bakerst, så det er de eldste som fjernes når lageret er fullt.
+      spriteCache.delete(id);
+      spriteCache.set(id, hit);
+      return hit;
+    }
     if (!spriteCache.has(id)) {
-      if (spriteCache.size > 400) spriteCache.clear(); // ikke la minnet vokse i det uendelige
+      if (spriteCache.size > 700) spriteCache.delete(spriteCache.keys().next().value);
       const c = document.createElement('canvas');
       c.width = Math.max(2, Math.round(w));
       c.height = Math.max(2, Math.round(h));

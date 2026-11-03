@@ -144,6 +144,12 @@
 
   function updateMe(dt) {
     if (mode === 'rolig') return;
+    // Så lenge fingeren holdes nede, flyr fuglen mot fingeren – også når kameraet følger etter.
+    if (pointer && (pointer.moved || !pointer.hit)) {
+      const p = toWorld({ clientX: pointer.cx, clientY: pointer.cy });
+      me.tx = p.x;
+      me.tu = p.u;
+    }
     let ax = 0;
     let au = 0;
     if (me.tx != null) {
@@ -152,8 +158,9 @@
       const d = Math.hypot(dx, du);
       if (d < 0.02 && !pointer) me.tx = null;
       else {
-        ax = (dx / (d || 1)) * Math.min(bird.speed, d * 2);
-        au = (du / (d || 1)) * Math.min(bird.speed, d * 2);
+        const k = pointer ? 3.5 : 2;
+        ax = (dx / (d || 1)) * Math.min(bird.speed, d * k);
+        au = (du / (d || 1)) * Math.min(bird.speed, d * k);
       }
     }
     const alt = D.altAt(me.u);
@@ -391,8 +398,11 @@
       const x = sx(t.x);
       const hpx = t.h * S;
       if (x < -hpx || x > W + hpx) continue;
-      const img = t.type === 'gran' ? FA.spruce(Math.max(16, Math.round(hpx / 8) * 8), 'sommer', t.v) : FA.birch(Math.max(16, Math.round(hpx / 8) * 8), 'sommer', t.v);
-      ctx.drawImage(img, x - img.width / 2, sy(gU(t.x)) - img.height + 2);
+      // Faste størrelser (skaleres ved tegning), så trærne tegnes ferdig bare noen få ganger.
+      const bh = Math.max(16, Math.round(([0.2, 0.28, 0.36].reduce((b, v) => (Math.abs(v - t.h) < Math.abs(b - t.h) ? v : b))) * S / 4) * 4);
+      const img = t.type === 'gran' ? FA.spruce(bh, 'sommer', t.v) : FA.birch(bh, 'sommer', t.v);
+      const k = hpx / img.height;
+      ctx.drawImage(img, x - img.width * k / 2, sy(gU(t.x)) - hpx + 2, img.width * k, hpx);
     }
     for (const h of houses) {
       const x = sx(h.x);
@@ -843,7 +853,7 @@
       }
       return;
     }
-    pointer = { id: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false, hit: hitTest(p) };
+    pointer = { id: e.pointerId, x0: e.clientX, y0: e.clientY, cx: e.clientX, cy: e.clientY, moved: false, hit: hitTest(p) };
     try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignorer */ }
     if (!pointer.hit) {
       me.tx = p.x;
@@ -853,12 +863,9 @@
   canvas.addEventListener('pointermove', (e) => {
     if (!pointer || e.pointerId !== pointer.id) return;
     lastInput = time;
+    pointer.cx = e.clientX;
+    pointer.cy = e.clientY;
     if (Math.hypot(e.clientX - pointer.x0, e.clientY - pointer.y0) > 10) pointer.moved = true;
-    if (pointer.moved) {
-      const p = toWorld(e);
-      me.tx = p.x;
-      me.tu = p.u;
-    }
   });
   canvas.addEventListener('pointerup', (e) => {
     if (!pointer || e.pointerId !== pointer.id) return;
@@ -926,9 +933,10 @@
       c.translate(w / 2, h * 0.5);
       SA.ART[k](c, k === 'plane' ? w * 0.7 : k === 'cirrus' ? w * 0.8 : k === 'kite' ? h * 0.5 : h * 0.6, t, { night });
     } else {
-      const perch = sp.pose === 'perch';
-      c.translate(w / 2, perch ? h * 0.9 : h * 0.5);
-      C.ART[k](c, Math.min(w * 0.55, h * (perch ? 0.8 : 0.7)), t, { pose: perch ? 'perch' : 'fly' });
+      c.restore();
+      const pose = sp.pose === 'perch' ? 'perch' : 'fly';
+      X.drawFitted(c, w, h, `sky-${k}-${pose}`, (cx, L) => C.ART[k](cx, L, t, { pose }), thumb ? 0.86 : 0.8);
+      return;
     }
     c.restore();
   }
