@@ -978,6 +978,29 @@ body[data-ocean-mode="rolig"] .ocean-mini { opacity: 0.6; }
   .ocean-inside-info p:not(.ocean-new) { font-size: 15px; }
 }
 
+/* ---------- Skogen og Himmelen ---------- */
+.forest-world { background: #2e4a2c; }
+.sky-world { background: #7fb2e0; }
+.forest-world .ocean-card,
+.sky-world .ocean-card { z-index: 3; }
+body[data-forest-mode="rolig"] #forest-listen-btn,
+body[data-sky-mode="rolig"] #sky-listen-btn { display: none; }
+.sky-meter .s1 { flex: 1; background: #6a9a4a; }
+.sky-meter .s2 { flex: 1.2; background: #8ab8d8; }
+.sky-meter .s3 { flex: 1.4; background: #a8cce8; }
+.sky-meter .s4 { flex: 1.6; background: #5a8ac8; }
+.sky-meter .s5 { flex: 1.2; background: #1a2a6a; }
+#screen-forest .game-top,
+#screen-sky .game-top { gap: 6px; }
+#screen-forest .ocean-mission,
+#screen-sky .ocean-mission { min-width: 0; }
+@media (max-width: 600px) {
+  #screen-forest .ocean-mission,
+  #screen-sky .ocean-mission { font-size: 13px; }
+  #screen-forest .game-top .icon-btn,
+  #screen-sky .game-top .icon-btn { width: 40px; height: 40px; font-size: 18px; }
+}
+
 /* ---------- Diverse ---------- */
 .toast {
   position: fixed;

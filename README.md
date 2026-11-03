@@ -94,6 +94,24 @@ Knølhval og spekkhogger er ekte undervannsopptak fra NOAA/DCLDE (CC BY-SA 4.0),
 `sounds/ocean/LISENS.md`. Alle figurene er tegnet med kode (Canvas 2D); dyrene får en lys kant
 på ryggen og en mørk kant under, så de ser mer runde ut.
 
+### 🌲 Skogen
+Gå langs en sti gjennom norsk skog: trykk der du vil gå. Klokka (morgen, dag, kveld, natt) og
+årstidknappen (vår, sommer, høst, vinter) forandrer lyset, trærne, været og hvem som er ute – ugla og
+reven kommer fram om natta, blåbær om sommeren, fluesopp om høsten og spor i snøen om vinteren.
+Man kan kikke under den store steinen, inn i det hule treet, i maurtua, under stubben og i dammen.
+👂 spiller en fuglesang eller et dyrelyd fra et dyr i nærheten – finn dyret og trykk på det.
+27 dyr, planter og trær (blant annet elg, rådyr, rev, hare, ekorn, kattugle, flaggspett, gjøk og
+kjøttmeis), og gaupe og brunbjørn som hemmeligheter i Oppdag.
+
+### 🦅 Himmelen
+Fly som måke, ørn eller spurv – fra hagen og hustakene, over skogen og fjellet, opp gjennom skyene
+og helt opp dit flyene flyr. Fuglene flyr ulikt: måken glir, ørna stiger raskt i varm luft som
+stiger (synlige søyler), og spurven flakser. Værknappen veksler mellom sol, skyer med regn,
+tordensky og regnbue, og natt med nordlys og stjerneskudd. 25 fugler og ting i lufta.
+I Rolig («Skykiker») ligger man i gresset og ser skyene drive forbi – av og til blir en sky til et dyr.
+
+Fuglesang, dyrelyder, vind og musikk i Skogen og Himmelen lages i appen (Web Audio), ikke av opptak.
+
 ### Felles
 - Lyd kan slås av, og alt leses opp med norsk talesyntese når enheten har det
 - 🏠-knappen i spillene må holdes inne i ett sekund, så barnet ikke avslutter ved et uhell
@@ -159,7 +177,9 @@ css/style.css       Utseende
 js/logic.js         Ren spill-logikk (testes med node --test)
 js/media.js         Lydeffekter, bokstavlyder, opptak, opplesning og konfetti
 js/core.js          Felles skall: skjermer, lagring, innstillinger, ferdigskjerm
-js/games/*.js       Ett skript per spill (spell, count, memory, shapes, build, liquid, domino, marble, ocean)
+js/games/*.js       Ett skript per spill (spell, count, memory, shapes, build, liquid, domino, marble, ocean, forest, sky)
+js/explore/         Felles for Skogen og Himmelen: faktakort, fotobok, lyd og musikk (kit.js) og dyretegninger
+js/forest/, js/sky/ Innhold (data.js) og kulisser (art.js) for Skogen og Himmelen
 js/ocean/           Havet: data (arter, steder, soner, dybde), tegninger, innsiden av grotter og vrak, lyd og musikk
 js/physics-kit.js   Felles hjelpere for domino og kulebane (Matter.js-scene, tegning, nivå klart)
 js/fluid.js         Væskesimulatoren (testes med node --test)
