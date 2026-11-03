@@ -67,6 +67,20 @@ for å slippe kuler fra røret.
 - **Fri bane** – bygg og slipp så mange kuler du vil.
 - **Treff koppen** (4 nivåer) – led kula ned i koppen, også rundt hyller og over en mur.
 
+### 🐋 Havet
+Styr en liten ubåt fra stranda ned gjennom Norskehavet og Atlanterhavet – overflaten, tareskogen,
+det åpne havet, skumringssonen og dypet ned mot 3000 meter. Lyset blir borte jo dypere man kommer,
+og lykta på ubåten slår seg på. Lyden endrer seg også: bølgeskvulp ved overflaten, dovere sus og en lav
+dur i dypet, og mer etterklang ved vraket og korallrevet. 24 dyr og ting kan oppdages
+(f.eks. torsk, hummer, spekkhogger, knølhval, lysprikkfisk, håkjerring, marulk og et skipsvrak).
+- **Lær** – oppdrag («Finn en krabbe», «Dykk ned til 100 meter» …), og kortene leses opp.
+- **Oppdag** – fri utforsking med fotobok, og noen hemmeligheter å finne.
+- **Rolig** – ingen kort og ingen oppdrag; ubåten glir av seg selv når man slipper. Valgfri sovetimer
+  som demper lyd og lys.
+
+Knølhval og spekkhogger er ekte undervannsopptak fra NOAA/DCLDE (CC BY-SA 4.0), se
+`sounds/ocean/LISENS.md`.
+
 ### Felles
 - Lyd kan slås av, og alt leses opp med norsk talesyntese når enheten har det
 - 🏠-knappen i spillene må holdes inne i ett sekund, så barnet ikke avslutter ved et uhell
@@ -132,11 +146,13 @@ css/style.css       Utseende
 js/logic.js         Ren spill-logikk (testes med node --test)
 js/media.js         Lydeffekter, bokstavlyder, opptak, opplesning og konfetti
 js/core.js          Felles skall: skjermer, lagring, innstillinger, ferdigskjerm
-js/games/*.js       Ett skript per spill (spell, count, memory, shapes, build, liquid, domino, marble)
+js/games/*.js       Ett skript per spill (spell, count, memory, shapes, build, liquid, domino, marble, ocean)
+js/ocean/           Havet: data (arter, soner, dybde), tegninger og lydbilde
 js/physics-kit.js   Felles hjelpere for domino og kulebane (Matter.js-scene, tegning, nivå klart)
 js/fluid.js         Væskesimulatoren (testes med node --test)
 js/vendor/          Matter.js 0.20.0 (MIT) for byggeklosser, domino og kulebane
 sounds/letters/     Bokstavlyder (mp3)
+sounds/ocean/       Ekte hvallyder (CC BY-SA 4.0, se LISENS.md)
 sw.js               Service worker for offline-bruk
 scripts/build-web.mjs  Kopierer nettappen til www/ (brukes av Capacitor og Pages)
 capacitor.config.json  Oppsett for Android-appen

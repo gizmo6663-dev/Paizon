@@ -1,0 +1,1120 @@
+/*
+ * Havet – tegninger. Alle dyr tegnes med origo i midten, vendt mot høyre (+x), med
+ * lengde L i piksler. t er tid i sekunder (til halesving, tentakler osv.).
+ * Stilen er «stemningsrealistisk»: myke fargeoverganger, mørk rygg og lys buk som hos
+ * ekte fisk, og ingen tykke omriss.
+ */
+(function () {
+  'use strict';
+
+  const TAU = Math.PI * 2;
+
+  function lin(ctx, x0, y0, x1, y1, stops) {
+    const g = ctx.createLinearGradient(x0, y0, x1, y1);
+    stops.forEach(([o, c]) => g.addColorStop(o, c));
+    return g;
+  }
+
+  function rad(ctx, x, y, r0, r1, stops) {
+    const g = ctx.createRadialGradient(x, y, r0, x, y, r1);
+    stops.forEach(([o, c]) => g.addColorStop(o, c));
+    return g;
+  }
+
+  function eye(ctx, x, y, r, iris) {
+    ctx.fillStyle = iris || '#d8d2b0';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = '#0b0b10';
+    ctx.beginPath();
+    ctx.arc(x + r * 0.1, y, r * 0.62, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath();
+    ctx.arc(x + r * 0.35, y - r * 0.35, r * 0.22, 0, TAU);
+    ctx.fill();
+  }
+
+  // ---------- Fisk (felles mal) ----------
+  /**
+   * Generisk fisk. o: { h: høyde/lengde, top, side, belly, tail: 'fork'|'round'|'shark',
+   * fins: fn(ctx, L, H) for ekstra finner, pattern: fn(ctx, L, H, t), eye: radius-faktor }
+   */
+  function fish(ctx, L, t, o) {
+    const H = L * o.h;
+    const sway = Math.sin(t * (o.speed || 8)) * 0.18;
+    const tx = -L * 0.34; // halerot
+    // Halefinne (svinger).
+    ctx.save();
+    ctx.translate(tx, 0);
+    ctx.rotate(sway);
+    ctx.fillStyle = o.finColor || o.top;
+    ctx.beginPath();
+    if (o.tail === 'round') {
+      ctx.moveTo(0, -H * 0.08);
+      ctx.quadraticCurveTo(-L * 0.2, -H * 0.55, -L * 0.18, 0);
+      ctx.quadraticCurveTo(-L * 0.2, H * 0.55, 0, H * 0.08);
+    } else {
+      ctx.moveTo(0, -H * 0.06);
+      ctx.quadraticCurveTo(-L * 0.08, -H * 0.2, -L * 0.18, -H * 0.62);
+      ctx.quadraticCurveTo(-L * 0.11, 0, -L * 0.18, H * 0.62);
+      ctx.quadraticCurveTo(-L * 0.08, H * 0.2, 0, H * 0.06);
+    }
+    ctx.closePath();
+    ctx.globalAlpha = 0.92;
+    ctx.fill();
+    ctx.restore();
+    ctx.globalAlpha = 1;
+
+    if (o.fins) o.fins(ctx, L, H, t);
+
+    // Kropp.
+    const body = new Path2D();
+    body.moveTo(L * 0.5, H * 0.02);
+    body.bezierCurveTo(L * 0.42, -H * 0.42, L * 0.1, -H * 0.52, -L * 0.1, -H * 0.42);
+    body.bezierCurveTo(-L * 0.25, -H * 0.32, -L * 0.32, -H * 0.12, tx - 2, -H * 0.06);
+    body.lineTo(tx - 2, H * 0.06);
+    body.bezierCurveTo(-L * 0.32, H * 0.14, -L * 0.2, H * 0.4, -L * 0.05, H * 0.44);
+    body.bezierCurveTo(L * 0.18, H * 0.48, L * 0.42, H * 0.34, L * 0.5, H * 0.02);
+    ctx.fillStyle = lin(ctx, 0, -H * 0.5, 0, H * 0.5, [[0, o.top], [0.45, o.side], [0.62, o.side], [1, o.belly]]);
+    ctx.fill(body);
+    if (o.pattern) {
+      ctx.save();
+      ctx.clip(body);
+      o.pattern(ctx, L, H, t);
+      ctx.restore();
+    }
+    // Glans øverst og skygge under – gir volum.
+    ctx.save();
+    ctx.clip(body);
+    ctx.fillStyle = lin(ctx, 0, -H * 0.5, 0, H * 0.5, [[0, 'rgba(255,255,255,0.18)'], [0.4, 'rgba(255,255,255,0)'], [0.85, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0.25)']]);
+    ctx.fillRect(-L, -H, L * 2, H * 2);
+    ctx.restore();
+    // Gjellelokk.
+    ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+    ctx.lineWidth = Math.max(1, L * 0.012);
+    ctx.beginPath();
+    ctx.arc(L * 0.26, H * 0.02, H * 0.36, -1.1, 1.1);
+    ctx.stroke();
+    // Brystfinne.
+    ctx.fillStyle = o.finColor || 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    ctx.moveTo(L * 0.2, H * 0.12);
+    ctx.quadraticCurveTo(L * 0.05, H * (0.28 + Math.sin(t * 5) * 0.06), L * 0.02, H * 0.34);
+    ctx.quadraticCurveTo(L * 0.12, H * 0.2, L * 0.2, H * 0.12);
+    ctx.fill();
+    eye(ctx, L * 0.36, -H * 0.08, Math.max(1.5, H * (o.eye || 0.1)), o.iris);
+  }
+
+  const SPECIES_ART = {};
+
+  SPECIES_ART.cod = (ctx, L, t) => fish(ctx, L, t, {
+    h: 0.26, top: '#6b6640', side: '#9a9268', belly: '#e9e4cf', speed: 5, tail: 'round', finColor: 'rgba(107,102,64,0.9)',
+    fins: (c, L2, H) => {
+      c.fillStyle = 'rgba(95,90,58,0.95)';
+      // Tre ryggfinner og to gattfinner – typisk for torsk.
+      for (const [x0, x1] of [[0.22, 0.06], [0.03, -0.12], [-0.14, -0.28]]) {
+        c.beginPath();
+        c.moveTo(L2 * x0, -H * 0.36);
+        c.quadraticCurveTo(L2 * (x0 + x1) / 2, -H * 0.72, L2 * x1, -H * 0.34);
+        c.fill();
+      }
+      for (const [x0, x1] of [[0.0, -0.12], [-0.14, -0.28]]) {
+        c.beginPath();
+        c.moveTo(L2 * x0, H * 0.4);
+        c.quadraticCurveTo(L2 * (x0 + x1) / 2, H * 0.66, L2 * x1, H * 0.34);
+        c.fill();
+      }
+      // Skjeggtråd.
+      c.strokeStyle = '#8d8560';
+      c.lineWidth = Math.max(1, L2 * 0.01);
+      c.beginPath();
+      c.moveTo(L2 * 0.44, H * 0.16);
+      c.quadraticCurveTo(L2 * 0.45, H * 0.36, L2 * 0.41, H * 0.42);
+      c.stroke();
+    },
+    pattern: (c, L2, H) => {
+      c.fillStyle = 'rgba(60,55,30,0.35)';
+      for (let i = 0; i < 26; i++) {
+        const x = -L2 * 0.3 + ((i * 37) % 60) / 60 * L2 * 0.72;
+        const y = -H * 0.4 + ((i * 53) % 40) / 40 * H * 0.45;
+        c.beginPath();
+        c.arc(x, y, H * 0.035, 0, TAU);
+        c.fill();
+      }
+      c.strokeStyle = 'rgba(240,235,210,0.7)';
+      c.lineWidth = Math.max(1, H * 0.03);
+      c.beginPath();
+      c.moveTo(L2 * 0.3, -H * 0.12);
+      c.quadraticCurveTo(0, -H * 0.2, -L2 * 0.33, 0);
+      c.stroke();
+    },
+  });
+
+  SPECIES_ART.mackerel = (ctx, L, t) => fish(ctx, L, t, {
+    h: 0.2, top: '#1f6b6a', side: '#5aa8a0', belly: '#f3f6f6', speed: 11, tail: 'fork', finColor: 'rgba(40,90,90,0.9)',
+    pattern: (c, L2, H) => {
+      c.strokeStyle = 'rgba(10,30,35,0.75)';
+      c.lineWidth = Math.max(1, H * 0.06);
+      for (let i = 0; i < 9; i++) {
+        const x = L2 * 0.25 - i * L2 * 0.065;
+        c.beginPath();
+        c.moveTo(x, -H * 0.5);
+        c.bezierCurveTo(x - L2 * 0.03, -H * 0.38, x + L2 * 0.02, -H * 0.24, x - L2 * 0.02, -H * 0.06);
+        c.stroke();
+      }
+    },
+  });
+
+  SPECIES_ART.herring = (ctx, L, t) => fish(ctx, L, t, {
+    h: 0.22, top: '#2f4f73', side: '#a9bccc', belly: '#f4f7fa', speed: 12, tail: 'fork', finColor: 'rgba(120,140,160,0.8)',
+  });
+
+  SPECIES_ART.wrasse = (ctx, L, t) => fish(ctx, L, t, {
+    h: 0.34, top: '#7b4a1e', side: '#c8762e', belly: '#e9c27a', speed: 6, tail: 'round', finColor: 'rgba(170,90,40,0.9)', eye: 0.11, iris: '#e3b049',
+    fins: (c, L2, H) => {
+      c.fillStyle = 'rgba(150,80,35,0.9)';
+      c.beginPath();
+      c.moveTo(L2 * 0.28, -H * 0.38);
+      for (let i = 0; i <= 10; i++) c.lineTo(L2 * (0.28 - i * 0.058), -H * (0.5 + (i % 2) * 0.1));
+      c.lineTo(-L2 * 0.3, -H * 0.2);
+      c.fill();
+    },
+    pattern: (c, L2, H) => {
+      c.fillStyle = 'rgba(255,240,200,0.45)';
+      for (let i = 0; i < 40; i++) {
+        c.beginPath();
+        c.arc(-L2 * 0.3 + ((i * 29) % 70) / 70 * L2 * 0.7, -H * 0.4 + ((i * 41) % 50) / 50 * H * 0.8, H * 0.03, 0, TAU);
+        c.fill();
+      }
+      // Tykke lepper.
+      c.fillStyle = '#e7a35c';
+      c.beginPath();
+      c.ellipse(L2 * 0.48, H * 0.03, L2 * 0.035, H * 0.09, 0, 0, TAU);
+      c.fill();
+    },
+  });
+
+  SPECIES_ART.lanternfish = (ctx, L, t) => fish(ctx, L, t, {
+    h: 0.22, top: '#1c1f2b', side: '#3b4256', belly: '#5d6478', speed: 9, tail: 'fork', eye: 0.17, iris: '#9fb4c8',
+  });
+
+  /** Lyset til lysprikkfisken (tegnes i lyslaget over mørket). */
+  function lanternGlow(ctx, L, t) {
+    const H = L * 0.22;
+    for (let i = 0; i < 7; i++) {
+      const x = L * 0.3 - i * L * 0.09;
+      const a = 0.6 + 0.4 * Math.sin(t * 3 + i);
+      ctx.fillStyle = rad(ctx, x, H * 0.32, 0, H * 0.5, [[0, `rgba(140,220,255,${a})`], [1, 'rgba(140,220,255,0)']]);
+      ctx.beginPath();
+      ctx.arc(x, H * 0.32, H * 0.5, 0, TAU);
+      ctx.fill();
+    }
+  }
+
+  SPECIES_ART.chimaera = (ctx, L, t) => {
+    const H = L * 0.22;
+    const sway = Math.sin(t * 3) * 0.25;
+    // Lang, tynn hale.
+    ctx.strokeStyle = '#a99a8c';
+    ctx.lineWidth = H * 0.12;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-L * 0.15, 0);
+    ctx.quadraticCurveTo(-L * 0.35, Math.sin(t * 3) * H * 0.4, -L * 0.55, Math.sin(t * 3 + 1) * H * 0.5);
+    ctx.stroke();
+    // Store brystfinner som vinger.
+    ctx.fillStyle = 'rgba(150,135,125,0.85)';
+    ctx.beginPath();
+    ctx.moveTo(L * 0.18, H * 0.1);
+    ctx.quadraticCurveTo(L * 0.02, H * (0.9 + sway), -L * 0.16, H * 0.55);
+    ctx.quadraticCurveTo(-L * 0.02, H * 0.3, L * 0.18, H * 0.1);
+    ctx.fill();
+    // Kropp.
+    ctx.fillStyle = lin(ctx, 0, -H * 0.6, 0, H * 0.5, [[0, '#7a6a61'], [0.5, '#bba99a'], [1, '#e2d8cd']]);
+    ctx.beginPath();
+    ctx.moveTo(L * 0.42, 0);
+    ctx.bezierCurveTo(L * 0.4, -H * 0.62, L * 0.05, -H * 0.62, -L * 0.18, -H * 0.12);
+    ctx.lineTo(-L * 0.18, H * 0.1);
+    ctx.bezierCurveTo(L * 0.05, H * 0.5, L * 0.38, H * 0.45, L * 0.42, 0);
+    ctx.fill();
+    // Giftpigg på ryggen.
+    ctx.fillStyle = '#5e5049';
+    ctx.beginPath();
+    ctx.moveTo(L * 0.14, -H * 0.5);
+    ctx.lineTo(L * 0.1, -H * 1.05);
+    ctx.lineTo(L * 0.04, -H * 0.48);
+    ctx.fill();
+    // Store, grønne øyne.
+    eye(ctx, L * 0.3, -H * 0.12, H * 0.2, '#3fbf6a');
+  };
+
+  SPECIES_ART.shark = (ctx, L, t) => {
+    const H = L * 0.17;
+    const sway = Math.sin(t * 1.6) * 0.12;
+    ctx.save();
+    ctx.translate(-L * 0.36, 0);
+    ctx.rotate(sway);
+    ctx.fillStyle = '#4f4b45';
+    ctx.beginPath();
+    ctx.moveTo(0, -H * 0.12);
+    ctx.lineTo(-L * 0.16, -H * 0.85);
+    ctx.quadraticCurveTo(-L * 0.12, 0, -L * 0.12, H * 0.45);
+    ctx.lineTo(0, H * 0.12);
+    ctx.fill();
+    ctx.restore();
+    const body = new Path2D();
+    body.moveTo(L * 0.5, H * 0.05);
+    body.bezierCurveTo(L * 0.45, -H * 0.55, L * 0.1, -H * 0.6, -L * 0.2, -H * 0.38);
+    body.lineTo(-L * 0.37, -H * 0.12);
+    body.lineTo(-L * 0.37, H * 0.12);
+    body.bezierCurveTo(-L * 0.1, H * 0.55, L * 0.35, H * 0.5, L * 0.5, H * 0.05);
+    ctx.fillStyle = lin(ctx, 0, -H * 0.6, 0, H * 0.5, [[0, '#3e3a35'], [0.55, '#6c675f'], [1, '#9a958b']]);
+    ctx.fill(body);
+    // Små ryggfinner og brystfinne.
+    ctx.fillStyle = '#4a463f';
+    ctx.beginPath();
+    ctx.moveTo(L * 0.05, -H * 0.55);
+    ctx.lineTo(-L * 0.02, -H * 0.9);
+    ctx.lineTo(-L * 0.08, -H * 0.5);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(L * 0.25, H * 0.3);
+    ctx.quadraticCurveTo(L * 0.12, H * 0.95, L * 0.06, H * 0.8);
+    ctx.lineTo(L * 0.15, H * 0.3);
+    ctx.fill();
+    // Gjellespalter.
+    ctx.strokeStyle = 'rgba(30,28,25,0.6)';
+    ctx.lineWidth = Math.max(1, L * 0.006);
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(L * (0.3 - i * 0.025), -H * 0.15);
+      ctx.lineTo(L * (0.29 - i * 0.025), H * 0.2);
+      ctx.stroke();
+    }
+    eye(ctx, L * 0.42, -H * 0.12, H * 0.06, '#7fa3a0');
+  };
+
+  SPECIES_ART.angler = (ctx, L, t) => {
+    const R = L * 0.38;
+    // Hale.
+    ctx.fillStyle = '#231c1c';
+    ctx.beginPath();
+    ctx.moveTo(-R * 0.8, 0);
+    ctx.lineTo(-R * 1.45, -R * 0.45 + Math.sin(t * 4) * R * 0.1);
+    ctx.lineTo(-R * 1.45, R * 0.45 + Math.sin(t * 4) * R * 0.1);
+    ctx.fill();
+    // Rund, mørk kropp.
+    ctx.fillStyle = rad(ctx, -R * 0.2, -R * 0.3, R * 0.1, R * 1.1, [[0, '#4a3a38'], [1, '#140f10']]);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, R, R * 0.85, 0, 0, TAU);
+    ctx.fill();
+    // Stor munn med tenner.
+    ctx.fillStyle = '#080506';
+    ctx.beginPath();
+    ctx.moveTo(R * 0.95, -R * 0.05);
+    ctx.quadraticCurveTo(R * 0.4, R * 0.55, R * 0.05, R * 0.35);
+    ctx.quadraticCurveTo(R * 0.5, R * 0.15, R * 0.95, -R * 0.05);
+    ctx.fill();
+    ctx.fillStyle = '#e9e2d4';
+    for (let i = 0; i < 7; i++) {
+      const x = R * (0.9 - i * 0.12);
+      const y = R * (0.0 + i * 0.05);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - R * 0.03, y + R * 0.16);
+      ctx.lineTo(x - R * 0.07, y);
+      ctx.fill();
+    }
+    // Fiskestanga med lykt.
+    ctx.strokeStyle = '#3a2d2c';
+    ctx.lineWidth = Math.max(1, R * 0.06);
+    ctx.beginPath();
+    ctx.moveTo(R * 0.3, -R * 0.75);
+    ctx.quadraticCurveTo(R * 0.8, -R * 1.6, R * 1.25, -R * 1.05);
+    ctx.stroke();
+    eye(ctx, R * 0.45, -R * 0.35, R * 0.08, '#6a5f5a');
+  };
+
+  function anglerGlow(ctx, L, t) {
+    const R = L * 0.38;
+    const a = 0.75 + 0.25 * Math.sin(t * 2.4);
+    ctx.fillStyle = rad(ctx, R * 1.25, -R * 1.05, 0, R * 0.9, [[0, `rgba(200,255,240,${a})`], [0.2, `rgba(120,240,220,${a * 0.6})`], [1, 'rgba(120,240,220,0)']]);
+    ctx.beginPath();
+    ctx.arc(R * 1.25, -R * 1.05, R * 0.9, 0, TAU);
+    ctx.fill();
+  }
+
+  // ---------- Sjøpattedyr ----------
+  /** Felles strømlinjeformet kropp for sel, nise, spekkhogger og knølhval. */
+  function mammalBody(L, H) {
+    const p = new Path2D();
+    p.moveTo(L * 0.5, H * 0.08);
+    p.bezierCurveTo(L * 0.48, -H * 0.45, L * 0.2, -H * 0.55, -L * 0.05, -H * 0.48);
+    p.bezierCurveTo(-L * 0.25, -H * 0.4, -L * 0.36, -H * 0.15, -L * 0.42, -H * 0.06);
+    p.lineTo(-L * 0.42, H * 0.06);
+    p.bezierCurveTo(-L * 0.3, H * 0.25, -L * 0.1, H * 0.5, L * 0.1, H * 0.5);
+    p.bezierCurveTo(L * 0.32, H * 0.5, L * 0.48, H * 0.35, L * 0.5, H * 0.08);
+    return p;
+  }
+
+  function flukes(ctx, L, H, t, color, speed) {
+    ctx.save();
+    ctx.translate(-L * 0.41, 0);
+    ctx.rotate(Math.sin(t * speed) * 0.25);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, -H * 0.05);
+    ctx.quadraticCurveTo(-L * 0.06, -H * 0.2, -L * 0.1, -H * 0.55);
+    ctx.quadraticCurveTo(-L * 0.06, -H * 0.08, -L * 0.075, 0);
+    ctx.quadraticCurveTo(-L * 0.06, H * 0.08, -L * 0.1, H * 0.55);
+    ctx.quadraticCurveTo(-L * 0.06, H * 0.2, 0, H * 0.05);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  SPECIES_ART.seal = (ctx, L, t) => {
+    const H = L * 0.26;
+    // Bakluffer.
+    ctx.save();
+    ctx.translate(-L * 0.4, 0);
+    ctx.rotate(Math.sin(t * 4) * 0.3);
+    ctx.fillStyle = '#5d5a55';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-L * 0.14, -H * 0.4);
+    ctx.lineTo(-L * 0.12, 0);
+    ctx.lineTo(-L * 0.14, H * 0.4);
+    ctx.fill();
+    ctx.restore();
+    const body = mammalBody(L, H);
+    ctx.fillStyle = lin(ctx, 0, -H * 0.5, 0, H * 0.5, [[0, '#615d57'], [0.55, '#8e8a83'], [1, '#c2bdb3']]);
+    ctx.fill(body);
+    ctx.save();
+    ctx.clip(body);
+    ctx.fillStyle = 'rgba(40,38,35,0.4)';
+    for (let i = 0; i < 40; i++) {
+      ctx.beginPath();
+      ctx.ellipse(-L * 0.38 + ((i * 31) % 80) / 80 * L * 0.85, -H * 0.45 + ((i * 47) % 60) / 60 * H * 0.75, H * 0.05, H * 0.035, i, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+    // Forluffe.
+    ctx.fillStyle = '#56524c';
+    ctx.beginPath();
+    ctx.ellipse(L * 0.18, H * 0.38, L * 0.07, H * 0.12, 0.6 + Math.sin(t * 3) * 0.2, 0, TAU);
+    ctx.fill();
+    // Nese, værhår og øye.
+    ctx.fillStyle = '#2b2926';
+    ctx.beginPath();
+    ctx.arc(L * 0.49, H * 0.02, H * 0.06, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(230,225,215,0.7)';
+    ctx.lineWidth = 1;
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(L * 0.46, H * 0.08);
+      ctx.lineTo(L * 0.58, H * (0.06 + i * 0.1));
+      ctx.stroke();
+    }
+    eye(ctx, L * 0.4, -H * 0.15, H * 0.1, '#1a1715');
+  };
+
+  SPECIES_ART.porpoise = (ctx, L, t) => {
+    const H = L * 0.22;
+    flukes(ctx, L, H, t, '#3c4249', 4);
+    const body = mammalBody(L, H);
+    ctx.fillStyle = lin(ctx, 0, -H * 0.5, 0, H * 0.5, [[0, '#30363d'], [0.5, '#5d6670'], [0.75, '#c9cdd0'], [1, '#eef0f1']]);
+    ctx.fill(body);
+    // Liten, trekantet ryggfinne.
+    ctx.fillStyle = '#30363d';
+    ctx.beginPath();
+    ctx.moveTo(L * 0.05, -H * 0.45);
+    ctx.lineTo(-L * 0.04, -H * 0.85);
+    ctx.lineTo(-L * 0.1, -H * 0.42);
+    ctx.fill();
+    ctx.fillStyle = '#3c4249';
+    ctx.beginPath();
+    ctx.ellipse(L * 0.22, H * 0.32, L * 0.06, H * 0.1, 0.6, 0, TAU);
+    ctx.fill();
+    eye(ctx, L * 0.38, -H * 0.05, H * 0.06, '#111');
+  };
+
+  SPECIES_ART.orca = (ctx, L, t) => {
+    const H = L * 0.24;
+    flukes(ctx, L, H, t, '#111316', 2.6);
+    const body = mammalBody(L, H);
+    ctx.fillStyle = lin(ctx, 0, -H * 0.5, 0, H * 0.5, [[0, '#0b0c0e'], [0.7, '#1b1d21'], [1, '#2a2d31']]);
+    ctx.fill(body);
+    ctx.save();
+    ctx.clip(body);
+    // Hvit buk, øyeflekk og grå «sal» – spekkhoggerens kjennetegn.
+    ctx.fillStyle = '#f2f3f1';
+    ctx.beginPath();
+    ctx.moveTo(L * 0.45, H * 0.2);
+    ctx.bezierCurveTo(L * 0.2, H * 0.55, -L * 0.05, H * 0.3, -L * 0.12, H * 0.5);
+    ctx.lineTo(-L * 0.2, H * 0.6);
+    ctx.lineTo(L * 0.5, H * 0.6);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(-L * 0.12, H * 0.22, L * 0.1, H * 0.12, -0.2, 0, TAU);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(L * 0.3, -H * 0.12, L * 0.07, H * 0.08, -0.15, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(160,165,170,0.55)';
+    ctx.beginPath();
+    ctx.ellipse(-L * 0.12, -H * 0.42, L * 0.09, H * 0.12, 0, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+    // Høy ryggfinne.
+    ctx.fillStyle = '#0d0e10';
+    ctx.beginPath();
+    ctx.moveTo(L * 0.05, -H * 0.45);
+    ctx.quadraticCurveTo(L * 0.0, -H * 1.0, -L * 0.04, -H * 1.35);
+    ctx.quadraticCurveTo(-L * 0.06, -H * 0.8, -L * 0.12, -H * 0.42);
+    ctx.fill();
+    // Brystluffe.
+    ctx.fillStyle = '#0d0e10';
+    ctx.beginPath();
+    ctx.ellipse(L * 0.2, H * 0.42, L * 0.08, H * 0.16, 0.5 + Math.sin(t * 2) * 0.1, 0, TAU);
+    ctx.fill();
+    eye(ctx, L * 0.36, -H * 0.04, H * 0.04, '#222');
+  };
+
+  SPECIES_ART.humpback = (ctx, L, t) => {
+    const H = L * 0.2;
+    flukes(ctx, L, H, t, '#2a2e33', 1.4);
+    const body = mammalBody(L, H);
+    ctx.fillStyle = lin(ctx, 0, -H * 0.5, 0, H * 0.5, [[0, '#24282c'], [0.6, '#3a3f45'], [0.85, '#6f747a'], [1, '#b8bcbf']]);
+    ctx.fill(body);
+    ctx.save();
+    ctx.clip(body);
+    // Strupefurer.
+    ctx.strokeStyle = 'rgba(220,225,228,0.45)';
+    ctx.lineWidth = Math.max(1, H * 0.02);
+    for (let i = 0; i < 7; i++) {
+      ctx.beginPath();
+      ctx.moveTo(L * 0.46, H * (0.18 + i * 0.045));
+      ctx.quadraticCurveTo(L * 0.25, H * (0.3 + i * 0.03), L * 0.02, H * (0.3 + i * 0.03));
+      ctx.stroke();
+    }
+    // Knøler på hodet.
+    ctx.fillStyle = 'rgba(15,17,20,0.6)';
+    for (let i = 0; i < 9; i++) {
+      ctx.beginPath();
+      ctx.arc(L * (0.47 - i * 0.022), -H * (0.15 + (i % 3) * 0.08), H * 0.035, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+    // Lange, lyse luffer – knølhvalens kjennetegn (nesten en tredjedel av kroppen).
+    ctx.save();
+    ctx.translate(L * 0.2, H * 0.28);
+    ctx.rotate(-0.5 + Math.sin(t * 1.2) * 0.12);
+    ctx.fillStyle = lin(ctx, 0, 0, -L * 0.3, 0, [[0, '#cfd3d4'], [1, '#9ea4a7']]);
+    ctx.beginPath();
+    ctx.moveTo(0, -H * 0.1);
+    ctx.quadraticCurveTo(-L * 0.15, -H * 0.16, -L * 0.3, -H * 0.03);
+    ctx.quadraticCurveTo(-L * 0.15, H * 0.13, 0, H * 0.1);
+    ctx.fill();
+    // Knøler langs forkanten av luffa.
+    ctx.fillStyle = 'rgba(120,125,130,0.7)';
+    for (let i = 1; i < 7; i++) {
+      ctx.beginPath();
+      ctx.arc(-L * 0.045 * i, -H * (0.12 - i * 0.012), H * 0.025, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+    // Liten ryggfinne på en pukkel.
+    ctx.fillStyle = '#24282c';
+    ctx.beginPath();
+    ctx.moveTo(-L * 0.12, -H * 0.42);
+    ctx.lineTo(-L * 0.17, -H * 0.7);
+    ctx.lineTo(-L * 0.23, -H * 0.34);
+    ctx.fill();
+    eye(ctx, L * 0.3, H * 0.08, H * 0.04, '#222');
+  };
+
+  // ---------- Maneter ----------
+  SPECIES_ART.lionsmane = (ctx, L, t) => {
+    // L = klokkas bredde. Lange tråder henger ned (tegnes rotert så «opp» er opp).
+    const R = L / 2;
+    const pulse = 1 + Math.sin(t * 2.2) * 0.06;
+    ctx.save();
+    ctx.rotate(-Math.PI / 2); // maneter driver oppover, ikke mot høyre
+    ctx.strokeStyle = 'rgba(230,140,90,0.45)';
+    ctx.lineWidth = Math.max(1, R * 0.03);
+    for (let i = 0; i < 26; i++) {
+      const x0 = -R * 0.9 + (i / 25) * R * 1.8;
+      ctx.beginPath();
+      ctx.moveTo(-R * 0.1, x0 * 0.85);
+      for (let k = 1; k <= 6; k++) {
+        const s = k / 6;
+        ctx.lineTo(-R * 0.1 - s * L * 3.2, x0 * (0.85 - s * 0.3) + Math.sin(t * 1.5 + i + s * 4) * R * 0.25 * s);
+      }
+      ctx.stroke();
+    }
+    // Munnarmer.
+    ctx.fillStyle = 'rgba(200,80,60,0.6)';
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.ellipse(-R * 0.8, i * R * 0.25 + Math.sin(t + i) * R * 0.08, R * 0.75, R * 0.18, 0, 0, TAU);
+      ctx.fill();
+    }
+    // Klokke.
+    ctx.scale(1, pulse);
+    ctx.fillStyle = rad(ctx, R * 0.2, 0, R * 0.1, R * 1.1, [[0, 'rgba(255,190,120,0.95)'], [0.6, 'rgba(205,85,45,0.9)'], [1, 'rgba(140,45,30,0.85)']]);
+    ctx.beginPath();
+    ctx.moveTo(-R * 0.15, -R);
+    ctx.quadraticCurveTo(R * 0.7, -R * 0.95, R * 0.7, 0);
+    ctx.quadraticCurveTo(R * 0.7, R * 0.95, -R * 0.15, R);
+    for (let i = 0; i <= 8; i++) ctx.lineTo(-R * (0.15 + (i % 2) * 0.12), R - i * R * 0.25);
+    ctx.fill();
+    ctx.restore();
+  };
+
+  SPECIES_ART.moonjelly = (ctx, L, t) => {
+    const R = L / 2;
+    const pulse = 1 + Math.sin(t * 2) * 0.08;
+    ctx.save();
+    ctx.rotate(-Math.PI / 2);
+    // Korte frynser.
+    ctx.strokeStyle = 'rgba(220,235,255,0.35)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 18; i++) {
+      const y = -R + (i / 17) * R * 2;
+      ctx.beginPath();
+      ctx.moveTo(-R * 0.05, y);
+      ctx.quadraticCurveTo(-R * 0.3, y + Math.sin(t * 2 + i) * R * 0.1, -R * 0.5, y * 0.9);
+      ctx.stroke();
+    }
+    ctx.scale(1, pulse);
+    ctx.fillStyle = rad(ctx, R * 0.2, 0, R * 0.1, R, [[0, 'rgba(235,245,255,0.55)'], [1, 'rgba(180,210,240,0.25)']]);
+    ctx.beginPath();
+    ctx.moveTo(0, -R);
+    ctx.quadraticCurveTo(R * 0.75, -R * 0.9, R * 0.75, 0);
+    ctx.quadraticCurveTo(R * 0.75, R * 0.9, 0, R);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(230,240,255,0.5)';
+    ctx.stroke();
+    // De fire ringene (kjønnskjertlene).
+    ctx.strokeStyle = 'rgba(200,140,210,0.75)';
+    ctx.lineWidth = Math.max(1.5, R * 0.08);
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * TAU + 0.6;
+      ctx.beginPath();
+      ctx.arc(R * 0.3 + Math.cos(a) * R * 0.12, Math.sin(a) * R * 0.35, R * 0.14, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
+
+  SPECIES_ART.combjelly = (ctx, L, t) => {
+    const R = L / 2;
+    ctx.save();
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = 'rgba(210,230,255,0.22)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, R, R * 0.62, 0, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(220,240,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  /** Kammanetens regnbuerader – glitrer selv i mørket, så den tegnes i lyslaget. */
+  function combGlow(ctx, L, t) {
+    const R = L / 2;
+    ctx.save();
+    ctx.rotate(-Math.PI / 2);
+    for (let row = 0; row < 8; row++) {
+      const yy = -R * 0.55 + (row / 7) * R * 1.1;
+      const span = Math.sqrt(Math.max(0, 1 - (yy / (R * 0.62)) ** 2)) * R * 0.95;
+      for (let k = 0; k < 9; k++) {
+        const x = -span + (k / 8) * span * 2;
+        const hue = (t * 120 + row * 40 + k * 25) % 360;
+        ctx.fillStyle = `hsla(${hue}, 100%, 65%, 0.85)`;
+        ctx.fillRect(x - 1.2, yy - 1.2, 2.4, 2.4);
+      }
+    }
+    ctx.restore();
+  }
+
+  // ---------- Bunndyr ----------
+  SPECIES_ART.crab = (ctx, L, t) => {
+    const W = L / 2;
+    const step = Math.sin(t * 8);
+    // Bein.
+    ctx.strokeStyle = '#8a4a2c';
+    ctx.lineWidth = Math.max(1.5, L * 0.04);
+    ctx.lineCap = 'round';
+    for (let side = -1; side <= 1; side += 2) {
+      for (let i = 0; i < 4; i++) {
+        const bx = side * W * (0.35 + i * 0.12);
+        const lift = (i % 2 ? step : -step) * L * 0.04;
+        ctx.beginPath();
+        ctx.moveTo(bx * 0.6, L * 0.05);
+        ctx.lineTo(bx * 1.25, -L * 0.02 + lift);
+        ctx.lineTo(bx * 1.45, L * 0.2);
+        ctx.stroke();
+      }
+    }
+    // Klør.
+    for (let side = -1; side <= 1; side += 2) {
+      ctx.fillStyle = '#9c5530';
+      ctx.beginPath();
+      ctx.ellipse(side * W * 0.95, -L * 0.18, L * 0.14, L * 0.09, side * 0.4, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = '#1b1210';
+      ctx.beginPath();
+      ctx.ellipse(side * W * 1.12, -L * 0.24, L * 0.06, L * 0.035, side * 0.6, 0, TAU);
+      ctx.fill();
+    }
+    // Skall med «paikant».
+    ctx.fillStyle = rad(ctx, 0, -L * 0.15, L * 0.05, L * 0.55, [[0, '#d48a52'], [1, '#8b4a28']]);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, W * 0.75, L * 0.25, 0, Math.PI, TAU);
+    for (let i = 0; i <= 10; i++) ctx.lineTo(W * 0.75 - (i / 10) * W * 1.5, (i % 2) * L * 0.03);
+    ctx.fill();
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(-L * 0.06, -L * 0.2, L * 0.025, 0, TAU);
+    ctx.arc(L * 0.06, -L * 0.2, L * 0.025, 0, TAU);
+    ctx.fill();
+  };
+
+  SPECIES_ART.lobster = (ctx, L, t) => {
+    const H = L * 0.14;
+    const wave = Math.sin(t * 2) * 0.1;
+    // Antenner.
+    ctx.strokeStyle = '#7a3b2a';
+    ctx.lineWidth = 1.2;
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(L * 0.42, -H * 0.2);
+      ctx.quadraticCurveTo(L * 0.7, -H * (1.5 + s * 0.5) + wave * H * 3, L * 0.9, -H * (0.5 + s * 1.2));
+      ctx.stroke();
+    }
+    // Store klør foran.
+    for (const s of [-1, 1]) {
+      ctx.fillStyle = s < 0 ? '#1f3550' : '#24405f';
+      ctx.beginPath();
+      ctx.ellipse(L * 0.55, s * H * 0.9 + H * 0.2, L * 0.16, H * 0.55, s * 0.2, 0, TAU);
+      ctx.fill();
+    }
+    // Hale og kropp i ledd.
+    ctx.fillStyle = lin(ctx, 0, -H, 0, H, [[0, '#132338'], [0.5, '#2b4a6e'], [1, '#1a2e48']]);
+    for (let i = 0; i < 6; i++) {
+      ctx.beginPath();
+      ctx.ellipse(-L * 0.05 - i * L * 0.075, 0, L * 0.045, H * (0.95 - i * 0.08), 0, 0, TAU);
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.moveTo(-L * 0.45, 0);
+    ctx.lineTo(-L * 0.55, -H * 0.8);
+    ctx.lineTo(-L * 0.55, H * 0.8);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(L * 0.2, 0, L * 0.22, H, 0, 0, TAU);
+    ctx.fill();
+    // Bein.
+    ctx.strokeStyle = '#2b4a6e';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(L * (0.25 - i * 0.07), H * 0.6);
+      ctx.lineTo(L * (0.22 - i * 0.07), H * 1.6 + Math.sin(t * 5 + i) * 1.5);
+      ctx.stroke();
+    }
+    eye(ctx, L * 0.4, -H * 0.4, H * 0.18, '#101010');
+  };
+
+  SPECIES_ART.starfish = (ctx, L, t) => {
+    const R = L / 2;
+    const bend = Math.sin(t * 0.8) * 0.05;
+    ctx.fillStyle = rad(ctx, 0, 0, R * 0.1, R, [[0, '#f0a060'], [0.6, '#d9672e'], [1, '#a8461f']]);
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i / 10) * TAU + bend;
+      const r = i % 2 ? R * 0.32 : R;
+      ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r * 0.55);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,230,190,0.6)';
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI / 2 + (i / 5) * TAU;
+      for (let k = 1; k <= 3; k++) {
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * R * k * 0.24, Math.sin(a) * R * k * 0.13, R * 0.04, 0, TAU);
+        ctx.fill();
+      }
+    }
+  };
+
+  SPECIES_ART.urchin = (ctx, L, t) => {
+    const R = L / 2;
+    // Korte, tette pigger rundt den runde kroppen.
+    ctx.strokeStyle = '#5f7334';
+    ctx.lineWidth = Math.max(1.2, R * 0.07);
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 46; i++) {
+      const a = Math.PI * 1.02 + (i / 45) * Math.PI * 0.96;
+      const wob = Math.sin(t * 1.5 + i * 1.7) * 0.06;
+      const len = R * (0.98 + ((i * 7) % 5) * 0.03);
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * R * 0.55, Math.sin(a) * R * 0.45);
+      ctx.lineTo(Math.cos(a + wob) * len, Math.sin(a + wob) * len * 0.82);
+      ctx.stroke();
+    }
+    ctx.fillStyle = rad(ctx, -R * 0.2, -R * 0.3, R * 0.1, R, [[0, '#9fb35a'], [1, '#55642b']]);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, R * 0.75, R * 0.6, 0, Math.PI, TAU);
+    ctx.fill();
+  };
+
+  SPECIES_ART.gull = (ctx, L, t) => {
+    const flap = Math.sin(t * 4); // 1 = vingene opp, -1 = ned
+    const wing = (shade, dx) => {
+      const tipY = -L * 0.42 * flap;
+      ctx.fillStyle = shade;
+      ctx.beginPath();
+      ctx.moveTo(L * 0.1 + dx, -L * 0.02);
+      ctx.quadraticCurveTo(L * 0.0 + dx, tipY * 0.55, -L * 0.18 + dx, tipY);
+      ctx.lineTo(-L * 0.3 + dx, tipY * 0.92);
+      ctx.quadraticCurveTo(-L * 0.12 + dx, tipY * 0.3, -L * 0.12 + dx, 0);
+      ctx.fill();
+      // Svarte vingespisser.
+      ctx.fillStyle = '#26282b';
+      ctx.beginPath();
+      ctx.moveTo(-L * 0.18 + dx, tipY);
+      ctx.lineTo(-L * 0.3 + dx, tipY * 0.92);
+      ctx.lineTo(-L * 0.24 + dx, tipY * 0.75);
+      ctx.fill();
+    };
+    wing('#9aa2aa', L * 0.06); // bakerste vinge
+    ctx.fillStyle = '#f4f6f7';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, L * 0.4, L * 0.1, 0, 0, TAU);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(L * 0.34, -L * 0.04, L * 0.08, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = '#f2c14a';
+    ctx.beginPath();
+    ctx.moveTo(L * 0.4, -L * 0.04);
+    ctx.lineTo(L * 0.54, -L * 0.02);
+    ctx.lineTo(L * 0.4, 0);
+    ctx.fill();
+    wing('#bfc6cc', 0); // fremste vinge
+    eye(ctx, L * 0.36, -L * 0.06, L * 0.02, '#111');
+  };
+
+  SPECIES_ART.giantsquid = (ctx, L, t) => {
+    // Kappe til høyre, armer bakover mot venstre (den svømmer baklengs med kappa først).
+    const H = L * 0.12;
+    ctx.strokeStyle = '#b5513e';
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 8; i++) {
+      ctx.lineWidth = Math.max(2, H * 0.22);
+      ctx.beginPath();
+      ctx.moveTo(-L * 0.02, (i - 3.5) * H * 0.12);
+      for (let k = 1; k <= 8; k++) {
+        const s = k / 8;
+        ctx.lineTo(-L * 0.02 - s * L * 0.32, (i - 3.5) * H * (0.12 + s * 0.12) + Math.sin(t * 1.4 + i + s * 5) * H * 0.4 * s);
+      }
+      ctx.stroke();
+    }
+    // To lange fangarmer.
+    ctx.lineWidth = Math.max(1.5, H * 0.1);
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(-L * 0.02, s * H * 0.1);
+      for (let k = 1; k <= 12; k++) {
+        const u = k / 12;
+        ctx.lineTo(-L * 0.02 - u * L * 0.52, s * H * (0.1 + u * 0.6) + Math.sin(t * 1.1 + u * 6 + s) * H * 0.6 * u);
+      }
+      ctx.stroke();
+    }
+    // Kappe med finner.
+    ctx.fillStyle = lin(ctx, 0, -H, 0, H, [[0, '#a2402f'], [0.5, '#d07055'], [1, '#93392a']]);
+    ctx.beginPath();
+    ctx.moveTo(L * 0.5, 0);
+    ctx.quadraticCurveTo(L * 0.4, -H * 0.85, L * 0.05, -H * 0.6);
+    ctx.lineTo(L * 0.05, H * 0.6);
+    ctx.quadraticCurveTo(L * 0.4, H * 0.85, L * 0.5, 0);
+    ctx.fill();
+    ctx.fillStyle = '#b04a37';
+    ctx.beginPath();
+    ctx.moveTo(L * 0.5, 0);
+    ctx.lineTo(L * 0.4, -H * 1.0);
+    ctx.lineTo(L * 0.34, 0);
+    ctx.lineTo(L * 0.4, H * 1.0);
+    ctx.fill();
+    // Stort øye.
+    eye(ctx, L * 0.04, -H * 0.1, H * 0.38, '#c9b98f');
+  };
+
+  // ---------- Ting ----------
+  SPECIES_ART.bottle = (ctx, L) => {
+    ctx.save();
+    ctx.rotate(-0.35);
+    ctx.fillStyle = 'rgba(120,170,120,0.55)';
+    ctx.beginPath();
+    ctx.ellipse(-L * 0.1, 0, L * 0.32, L * 0.13, 0, 0, TAU);
+    ctx.fill();
+    ctx.fillRect(L * 0.18, -L * 0.05, L * 0.22, L * 0.1);
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(L * 0.38, -L * 0.055, L * 0.08, L * 0.11);
+    ctx.fillStyle = '#f2e6c4';
+    ctx.fillRect(-L * 0.28, -L * 0.06, L * 0.32, L * 0.12);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillRect(-L * 0.35, -L * 0.1, L * 0.45, L * 0.025);
+    ctx.restore();
+  };
+
+  // Korallrev og vrak tegnes én gang til et eget lerret (de er store og står stille).
+  const spriteCache = new Map();
+  function sprite(key, w, h, draw) {
+    const id = `${key}:${Math.round(w)}x${Math.round(h)}`;
+    if (!spriteCache.has(id)) {
+      const c = document.createElement('canvas');
+      c.width = Math.max(2, Math.round(w));
+      c.height = Math.max(2, Math.round(h));
+      draw(c.getContext('2d'), c.width, c.height);
+      spriteCache.set(id, c);
+    }
+    return spriteCache.get(id);
+  }
+
+  /** Pseudo-tilfeldig tall fra et frø, så samme rev ser likt ut hver gang. */
+  function seeded(seed) {
+    let s = seed;
+    return () => {
+      s = (s * 16807) % 2147483647;
+      return (s - 1) / 2147483646;
+    };
+  }
+
+  SPECIES_ART.coral = (ctx, L) => {
+    const W = L;
+    const H = L * 0.6;
+    const img = sprite('coral', W, H, (c, w, h) => {
+      const rnd = seeded(7);
+      const branch = (x, y, ang, len, depth) => {
+        if (depth === 0 || len < 2) return;
+        const x2 = x + Math.cos(ang) * len;
+        const y2 = y + Math.sin(ang) * len;
+        c.strokeStyle = depth > 3 ? '#e9e2d6' : depth > 1 ? '#f2d2b8' : '#f7a978';
+        c.lineWidth = Math.max(1, depth * 1.1);
+        c.lineCap = 'round';
+        c.beginPath();
+        c.moveTo(x, y);
+        c.lineTo(x2, y2);
+        c.stroke();
+        // Polypper på tuppene.
+        if (depth <= 2) {
+          c.fillStyle = 'rgba(255,190,150,0.9)';
+          c.beginPath();
+          c.arc(x2, y2, 1.6, 0, TAU);
+          c.fill();
+        }
+        branch(x2, y2, ang - 0.35 - rnd() * 0.3, len * (0.72 + rnd() * 0.12), depth - 1);
+        branch(x2, y2, ang + 0.35 + rnd() * 0.3, len * (0.72 + rnd() * 0.12), depth - 1);
+      };
+      for (let i = 0; i < 9; i++) {
+        branch(w * (0.08 + i * 0.105), h, -Math.PI / 2 + (rnd() - 0.5) * 0.6, h * (0.18 + rnd() * 0.12), 6);
+      }
+    });
+    ctx.drawImage(img, -W / 2, -H);
+  };
+
+  SPECIES_ART.wreck = (ctx, L) => {
+    const W = L;
+    const H = L * 0.42;
+    const img = sprite('wreck', W, H, (c, w, h) => {
+      // Skroget ligger litt på skrå på bunnen.
+      c.translate(w * 0.5, h * 0.62);
+      c.rotate(-0.06);
+      c.fillStyle = lin(c, 0, -h * 0.3, 0, h * 0.3, [[0, '#5b4632'], [1, '#2e2219']]);
+      c.beginPath();
+      c.moveTo(-w * 0.46, -h * 0.15);
+      c.lineTo(w * 0.42, -h * 0.2);
+      c.quadraticCurveTo(w * 0.5, -h * 0.05, w * 0.36, h * 0.3);
+      c.lineTo(-w * 0.38, h * 0.3);
+      c.quadraticCurveTo(-w * 0.5, h * 0.1, -w * 0.46, -h * 0.15);
+      c.fill();
+      // Plankelinjer og et stort hull.
+      c.strokeStyle = 'rgba(20,14,10,0.5)';
+      c.lineWidth = 1.5;
+      for (let i = 1; i < 6; i++) {
+        c.beginPath();
+        c.moveTo(-w * 0.45, -h * 0.15 + i * h * 0.08);
+        c.lineTo(w * 0.42, -h * 0.2 + i * h * 0.085);
+        c.stroke();
+      }
+      c.fillStyle = '#120d0a';
+      c.beginPath();
+      c.ellipse(w * 0.08, h * 0.08, w * 0.08, h * 0.12, 0.3, 0, TAU);
+      c.fill();
+      // Koøyer.
+      c.fillStyle = '#1d1610';
+      c.strokeStyle = '#8a7a52';
+      for (let i = 0; i < 5; i++) {
+        c.beginPath();
+        c.arc(-w * 0.3 + i * w * 0.13, -h * 0.05, h * 0.035, 0, TAU);
+        c.fill();
+        c.stroke();
+      }
+      // Knekt mast.
+      c.fillStyle = '#4a3828';
+      c.save();
+      c.translate(-w * 0.05, -h * 0.17);
+      c.rotate(0.35);
+      c.fillRect(-w * 0.012, -h * 0.75, w * 0.024, h * 0.75);
+      c.fillRect(-w * 0.1, -h * 0.55, w * 0.2, h * 0.03);
+      c.restore();
+      // Begroing (sjøanemoner og tang).
+      const rnd = seeded(11);
+      for (let i = 0; i < 26; i++) {
+        c.fillStyle = ['rgba(240,150,120,0.8)', 'rgba(230,230,210,0.75)', 'rgba(120,160,90,0.8)'][i % 3];
+        c.beginPath();
+        c.arc(-w * 0.45 + rnd() * w * 0.88, -h * 0.2 + rnd() * h * 0.06, h * (0.015 + rnd() * 0.02), 0, TAU);
+        c.fill();
+      }
+      // Anker ved siden av.
+      c.strokeStyle = '#6b6b66';
+      c.lineWidth = 3;
+      c.beginPath();
+      c.moveTo(w * 0.44, h * 0.32);
+      c.lineTo(w * 0.44, h * 0.08);
+      c.moveTo(w * 0.4, h * 0.12);
+      c.lineTo(w * 0.48, h * 0.12);
+      c.moveTo(w * 0.38, h * 0.26);
+      c.quadraticCurveTo(w * 0.44, h * 0.38, w * 0.5, h * 0.26);
+      c.stroke();
+    });
+    ctx.drawImage(img, -W / 2, -H * 0.92);
+  };
+
+  // ---------- Ubåten ----------
+  function submarine(ctx, L, t, lightOn) {
+    const H = L * 0.42;
+    // Propell.
+    ctx.fillStyle = '#5c5f63';
+    const p = Math.abs(Math.sin(t * 18));
+    ctx.beginPath();
+    ctx.ellipse(-L * 0.53, 0, L * 0.03, H * 0.42 * p + 2, 0, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = '#e0a21a';
+    ctx.beginPath();
+    ctx.moveTo(-L * 0.45, -H * 0.05);
+    ctx.lineTo(-L * 0.55, -H * 0.45);
+    ctx.lineTo(-L * 0.5, 0);
+    ctx.lineTo(-L * 0.55, H * 0.45);
+    ctx.lineTo(-L * 0.45, H * 0.05);
+    ctx.fill();
+    // Skrog.
+    ctx.fillStyle = lin(ctx, 0, -H * 0.5, 0, H * 0.5, [[0, '#ffe066'], [0.5, '#f5b819'], [1, '#c98a06']]);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, L * 0.47, H * 0.5, 0, 0, TAU);
+    ctx.fill();
+    // Tårn.
+    ctx.fillStyle = '#f0b015';
+    ctx.beginPath();
+    ctx.moveTo(-L * 0.12, -H * 0.42);
+    ctx.lineTo(-L * 0.08, -H * 0.85);
+    ctx.lineTo(L * 0.12, -H * 0.85);
+    ctx.lineTo(L * 0.16, -H * 0.42);
+    ctx.fill();
+    ctx.strokeStyle = '#6a6d72';
+    ctx.lineWidth = Math.max(1.5, L * 0.015);
+    ctx.beginPath();
+    ctx.moveTo(L * 0.02, -H * 0.85);
+    ctx.lineTo(L * 0.02, -H * 1.1);
+    ctx.lineTo(L * 0.1, -H * 1.1);
+    ctx.stroke();
+    // Koøyer.
+    for (const [x, r] of [[L * 0.22, 0.24], [-L * 0.08, 0.16], [-L * 0.27, 0.13]]) {
+      ctx.fillStyle = '#5d6168';
+      ctx.beginPath();
+      ctx.arc(x, -H * 0.02, H * r + 2, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = rad(ctx, x - H * r * 0.3, -H * 0.1, 1, H * r, [[0, '#d8f4ff'], [1, '#3d8fb5']]);
+      ctx.beginPath();
+      ctx.arc(x, -H * 0.02, H * r, 0, TAU);
+      ctx.fill();
+    }
+    // Lykt foran.
+    ctx.fillStyle = lightOn ? '#fff8d0' : '#9a9a8a';
+    ctx.beginPath();
+    ctx.ellipse(L * 0.46, H * 0.12, L * 0.03, H * 0.13, 0, 0, TAU);
+    ctx.fill();
+  }
+
+  // ---------- Omgivelser ----------
+  /** Tare: lange, svaiende stilker med blad. */
+  function kelp(ctx, x, yBottom, height, t, phase, color) {
+    const segs = 8;
+    let px = x;
+    let py = yBottom;
+    ctx.strokeStyle = color || '#5b5a24';
+    ctx.lineCap = 'round';
+    for (let i = 1; i <= segs; i++) {
+      const s = i / segs;
+      const nx = x + Math.sin(t * 0.8 + phase + s * 2) * height * 0.09 * s;
+      const ny = yBottom - s * height;
+      ctx.lineWidth = Math.max(1, height * 0.025 * (1.2 - s * 0.6));
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(nx, ny);
+      ctx.stroke();
+      if (i > 2 && i % 2 === 0) {
+        ctx.fillStyle = color || '#6b6a2a';
+        ctx.beginPath();
+        ctx.ellipse(nx + height * 0.04, ny, height * 0.07, height * 0.016, 0.5 + Math.sin(t + phase + i) * 0.2, 0, TAU);
+        ctx.fill();
+      }
+      px = nx;
+      py = ny;
+    }
+    // Det store bladet i toppen (tareblad).
+    ctx.fillStyle = color || '#6e6b28';
+    ctx.beginPath();
+    ctx.ellipse(px + height * 0.06, py - height * 0.05, height * 0.05, height * 0.14, 0.4 + Math.sin(t * 0.8 + phase) * 0.25, 0, TAU);
+    ctx.fill();
+  }
+
+  /** Lysmønster på bunnen i grunt vann (kaustikk). Lages én gang som et mønster. */
+  function causticTile(size) {
+    return sprite('caustic', size, size, (c, w, h) => {
+      const img = c.createImageData(w, h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const u = (x / w) * TAU;
+          const v = (y / h) * TAU;
+          // Summen av noen bølger som går opp i hele flisa – gir lyse, buktende linjer.
+          let s = 0;
+          s += Math.sin(u * 3 + Math.sin(v * 2) * 1.5);
+          s += Math.sin(v * 4 + Math.sin(u * 3) * 1.2);
+          s += Math.sin((u + v) * 2 + Math.cos(u * 5) * 0.8);
+          const line = Math.max(0, 1 - Math.abs(s) * 1.4);
+          const a = Math.pow(line, 2.2) * 255;
+          const i = (y * w + x) * 4;
+          img.data[i] = 255;
+          img.data[i + 1] = 255;
+          img.data[i + 2] = 230;
+          img.data[i + 3] = a;
+        }
+      }
+      c.putImageData(img, 0, 0);
+    });
+  }
+
+  const GLOWS = { lanternfish: lanternGlow, angler: anglerGlow, combjelly: combGlow };
+
+  window.PaizonOceanArt = { SPECIES_ART, GLOWS, submarine, kelp, causticTile, seeded, eye };
+})();

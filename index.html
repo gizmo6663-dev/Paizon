@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#6c5ce7">
-  <meta name="description" content="Paizon – lærerike spill for barn: stave ord, telle, memory, farger og former, byggeklosser, væskelek, domino og kulebane.">
+  <meta name="description" content="Paizon – lærerike spill for barn: stave ord, telle, memory, farger og former, byggeklosser, væskelek, havet, domino og kulebane.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Paizon">
@@ -62,6 +62,11 @@
           <span class="game-emoji" aria-hidden="true">💧</span>
           <span class="game-name">Væskelek</span>
           <span class="game-desc">Rør, hell og bland farger</span>
+        </button>
+        <button class="game-card feature" data-go="ocean-setup" style="--card: #0b5d7a">
+          <span class="game-emoji" aria-hidden="true">🐋</span>
+          <span class="game-name">Havet</span>
+          <span class="game-desc">Dykk ned i Norskehavet</span>
         </button>
         <button class="game-card" data-go="domino-setup" style="--card: #c0392b">
           <span class="game-emoji" aria-hidden="true">🁢</span>
@@ -550,6 +555,91 @@
       </div>
     </section>
 
+    <!-- ===================== HAVET: OPPSETT ===================== -->
+    <section id="screen-ocean-setup" class="screen" aria-labelledby="ocean-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="ocean-setup-title">🐋 Havet</h2>
+        </div>
+        <p class="muted">Kjør ubåten fra overflaten og helt ned til dyphavet i Norskehavet. Dra med fingeren for å kjøre, og trykk på dyrene.</p>
+        <div class="mode-grid">
+          <button class="mode-card" data-ocean="lar">
+            <span class="mode-emoji" aria-hidden="true">🎓</span>
+            <span class="mode-name">Lær</span>
+            <span class="mode-desc">Dyrene presenterer seg og leses opp. Små oppdrag underveis.</span>
+          </button>
+          <button class="mode-card" data-ocean="oppdag">
+            <span class="mode-emoji" aria-hidden="true">🔭</span>
+            <span class="mode-name">Oppdag</span>
+            <span class="mode-desc">Fyll fotoboka – og let etter hemmeligheter i dypet.</span>
+          </button>
+          <button class="mode-card" data-ocean="rolig">
+            <span class="mode-emoji" aria-hidden="true">🌙</span>
+            <span class="mode-name">Rolig</span>
+            <span class="mode-desc">Ingen tekst, bare havets lyder. Ubåten glir av seg selv.</span>
+          </button>
+        </div>
+        <p class="field-label">Sovetimer i Rolig</p>
+        <div class="choice-row" data-game="ocean" data-key="sleep">
+          <button data-value="0">Av</button><button data-value="10">10 min</button><button data-value="20">20 min</button><button data-value="30">30 min</button>
+        </div>
+        <p class="field-help">Dyrelydene til knølhval og spekkhogger er ekte undervannsopptak (DCLDE 2027 / NOAA, CC BY-SA 4.0).</p>
+      </div>
+    </section>
+
+    <!-- ===================== HAVET: SPILL ===================== -->
+    <section id="screen-ocean" class="screen game-screen fullscreen-game" aria-label="Havet">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="ocean-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <p id="ocean-mission" class="ocean-mission" aria-live="polite" hidden></p>
+        <button id="ocean-album-btn" class="icon-btn" aria-label="Fotobok" title="Fotobok">📖</button>
+      </div>
+      <div id="ocean-world" class="sim-world ocean-world">
+        <canvas id="ocean-canvas" aria-label="Havet – dra for å kjøre ubåten, trykk på dyrene"></canvas>
+        <div class="ocean-hud" aria-hidden="true">
+          <div id="ocean-meter" class="ocean-meter" role="meter" aria-valuemin="0" aria-valuemax="3000">
+            <span class="band b1"></span><span class="band b2"></span><span class="band b3"></span><span class="band b4"></span><span class="band b5"></span>
+            <span id="ocean-meter-dot" class="dot-sub">🟡</span>
+          </div>
+          <div class="ocean-readout"><strong id="ocean-depth">0 m</strong><span id="ocean-zone">Overflaten</span></div>
+        </div>
+        <div id="ocean-banner" class="ocean-banner" aria-live="polite"></div>
+
+        <div id="ocean-card" class="ocean-card" role="dialog" aria-labelledby="ocean-card-name" hidden>
+          <canvas id="ocean-card-art" class="ocean-card-art" aria-hidden="true"></canvas>
+          <div class="ocean-card-body">
+            <p id="ocean-card-new" class="ocean-new" hidden>📸 Ny i fotoboka!</p>
+            <h3 id="ocean-card-name"></h3>
+            <p id="ocean-card-sci" class="ocean-sci"></p>
+            <p id="ocean-card-facts" class="ocean-facts"></p>
+            <div class="ocean-card-actions">
+              <button id="ocean-card-read" class="btn small">🗣️ Les opp</button>
+              <button id="ocean-card-sound" class="btn small primary">🔊 Hør dyret</button>
+              <button id="ocean-card-close" class="btn small ghost">✕ Lukk</button>
+            </div>
+            <p id="ocean-card-credit" class="ocean-credit" hidden>Ekte undervannsopptak: DCLDE 2027 / NOAA NCEI, CC BY-SA 4.0</p>
+          </div>
+        </div>
+
+        <div id="ocean-album" class="ocean-album" role="dialog" aria-label="Fotobok" hidden>
+          <div class="ocean-album-head">
+            <h3>📖 Fotoboka</h3>
+            <button id="ocean-album-close" class="btn small ghost">✕ Lukk</button>
+          </div>
+          <div id="ocean-album-grid" class="ocean-album-grid"></div>
+        </div>
+
+        <div id="ocean-goodnight" class="ocean-goodnight" hidden>
+          <p>🌙 God natt</p>
+          <button id="ocean-wake" class="btn small ghost">Fortsett å se</button>
+        </div>
+      </div>
+    </section>
+
     <!-- ===================== FERDIG (felles) ===================== -->
     <section id="screen-done" class="screen" aria-labelledby="done-title">
       <div class="panel center">
@@ -593,6 +683,10 @@
   <script src="js/games/shapes.js"></script>
   <script src="js/games/build.js"></script>
   <script src="js/games/liquid.js"></script>
+  <script src="js/ocean/data.js"></script>
+  <script src="js/ocean/art.js"></script>
+  <script src="js/ocean/audio.js"></script>
+  <script src="js/games/ocean.js"></script>
   <script src="js/physics-kit.js"></script>
   <script src="js/games/domino.js"></script>
   <script src="js/games/marble.js"></script>
