@@ -131,9 +131,15 @@
     tone.frequency.value = 2400;
     const send = ctx.createGain();
     send.gain.value = 0.9;
-    bus.connect(tone).connect(nodes.out);
-    tone.connect(send).connect(nodes.reverb);
-    bus.gain.setTargetAtTime(0.5, ctx.currentTime, 3);
+    // Musikken er skrudd godt opp, så en kompressor tar toppene når akkordene overlapper.
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18;
+    comp.ratio.value = 4;
+    comp.attack.value = 0.05;
+    comp.release.value = 0.6;
+    bus.connect(tone).connect(comp).connect(nodes.out);
+    comp.connect(send).connect(nodes.reverb);
+    bus.gain.setTargetAtTime(1.3, ctx.currentTime, 3);
     music = { bus, tone, chord: 0, timers: [], voices: [] };
     nextChord();
     scheduleBell(3);
@@ -170,7 +176,7 @@
     chord.forEach((n, i) => {
       // Dypere i havet: musikken legger seg lavere.
       const shift = musicDepth > 400 ? -12 : 0;
-      pad(midi(n + (i ? shift : 0)), now, dur, i === 0 ? 0.05 : 0.022);
+      pad(midi(n + (i ? shift : 0)), now, dur, i === 0 ? 0.1 : 0.045);
     });
     music.timers.push(setTimeout(nextChord, (dur - 6) * 1000));
   }
@@ -192,7 +198,7 @@
     p.pan.value = Math.random() * 1.4 - 0.7;
     p.connect(music.bus);
     // Grunntone og en «glass»-overtone.
-    [[1, 0.05], [2.76, 0.012], [5.4, 0.004]].forEach(([ratio, level]) => {
+    [[1, 0.14], [2.76, 0.03], [5.4, 0.01]].forEach(([ratio, level]) => {
       const o = ctx.createOscillator();
       const g = ctx.createGain();
       o.frequency.value = midi(n) * ratio;
@@ -209,7 +215,7 @@
       const g = ctx.createGain();
       o.frequency.value = midi(n + 12);
       g.gain.setValueAtTime(0.0001, now + 0.6);
-      g.gain.exponentialRampToValueAtTime(0.015, now + 0.62);
+      g.gain.exponentialRampToValueAtTime(0.045, now + 0.62);
       g.gain.exponentialRampToValueAtTime(0.0001, now + 3.5);
       o.connect(g).connect(p);
       o.start(now + 0.6);
