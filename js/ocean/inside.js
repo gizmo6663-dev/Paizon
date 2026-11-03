@@ -582,6 +582,7 @@
   let found = new Set();
   let glow = new Map();
   let particles = [];
+  let swimmers = [];
   let selected = null;
 
   function setup() {
@@ -657,6 +658,12 @@
     lookV = 0;
     torch.x = W * 0.5;
     torch.y = H * 0.55;
+    // Småfisk som svømmer forbi (og maneter som driver i dypet) – gir liv i rommet.
+    const kinds = p.light > 0.3 ? ['wrasse', 'herring', 'cod'] : p.light > 0.08 ? ['herring', 'cod'] : ['combjelly', 'lanternfish'];
+    swimmers = Array.from({ length: p.light > 0.3 ? 6 : 4 }, (_, i) => ({
+      art: kinds[i % kinds.length], x: Math.random(), y: 0.25 + Math.random() * 0.5, dir: Math.random() < 0.5 ? -1 : 1,
+      speed: 0.012 + Math.random() * 0.02, size: 0.05 + Math.random() * 0.05, layer: i % 2, ph: Math.random() * 10, face: 1,
+    }));
     particles = Array.from({ length: 70 }, (_, i) => ({ x: Math.random(), y: Math.random(), z: 0.3 + Math.random(), r: 0.6 + Math.random() * 1.6, ph: i }));
     document.getElementById('ocean-inside-name').textContent = p.name;
     hideInfo();
@@ -850,6 +857,54 @@
     ctx.restore();
   }
 
+  function drawSwimmers(layer, dt) {
+    for (const f of swimmers) {
+      if (f.layer !== layer) continue;
+      f.x += f.dir * f.speed * dt;
+      if (f.x < -0.05 || f.x > 1.05) {
+        f.dir *= -1;
+        f.y = 0.25 + Math.random() * 0.5;
+      }
+      f.face += (f.dir - f.face) * Math.min(1, dt * 3);
+      const par = PARALLAX[layer];
+      const lw = W + (place.panoW - W) * par;
+      const x = f.x * lw - layerOffset(par);
+      const y = (f.y + Math.sin(time * 0.5 + f.ph) * 0.02) * H;
+      const L = f.size * H * (layer ? 1 : 0.7);
+      if (x < -L || x > W + L) continue;
+      const art = A.SPECIES_ART[f.art];
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.globalAlpha = layer ? 0.95 : 0.7;
+      if (f.art !== 'combjelly') ctx.scale(Math.sign(f.face || 1) * Math.max(0.12, Math.abs(f.face)), 1);
+      art(ctx, L, time * 1.3 + f.ph);
+      ctx.restore();
+      const glow = A.GLOWS[f.art];
+      if (glow) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.translate(x, y);
+        glow(ctx, L, time * 1.3 + f.ph);
+        ctx.restore();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /** Lysmønster som bølger over bunnen der dagslyset når inn. */
+  function drawCaustics() {
+    if (place.light < 0.3) return;
+    const pat = ctx.createPattern(A.causticTile(160), 'repeat');
+    if (!pat) return;
+    pat.setTransform(new DOMMatrix().translate(-look * 0.8 + time * 12, time * 6).scale(H / 500));
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.18 * place.light;
+    ctx.fillStyle = pat;
+    ctx.fillRect(0, H * 0.78, W, H * 0.22);
+    ctx.restore();
+  }
+
   function drawParticles(dt) {
     for (const p of particles) {
       p.y -= dt * 0.006 * p.z;
@@ -962,6 +1017,8 @@
     layers.forEach((l, i) => {
       ctx.drawImage(l.canvas, -layerOffset(l.par), 0);
       if (i === 0) drawLightShafts();
+      if (i === 1) drawCaustics();
+      if (i < 2) drawSwimmers(i, dt);
       drawItems(i);
     });
     ctx.restore();

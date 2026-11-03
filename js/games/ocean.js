@@ -50,6 +50,9 @@
   let animals = [];
   let kelpList = [];
   let rocks = [];
+  let details = [];
+  let bokeh = [];
+  let farLife = [];
   let snow = [];
   let bubbles = [];
   let sparks = [];
@@ -65,6 +68,9 @@
   let sleeping = false;
   let nextWhale = 0;
   let lastBubble = 0;
+  // Kvaliteten tilpasser seg: går bildeflyten tregt, tegnes det med færre piksler, og til slutt
+  // uten lyskantene på dyrene. Slik blir det jevnt også på eldre nettbrett.
+  const quality = { maxDpr: 2, shade: true, slow: 0, ema: 16 };
   let visited = new Set(); // steder man har vært inne i
   let inside = null; // stedet man er inne i nå
   let pinch = null;
@@ -124,7 +130,10 @@
       // Taren blir aldri høyere enn vannet er dypt (den skal ikke stikke opp i lufta).
       const maxH = (D.seabedAt(x) - 0.04) * 0.85;
       const nearPlace = D.PLACES.some((pl) => pl.kind !== 'ship' && Math.abs(pl.x - x) < pl.size * 0.45);
-      if (d > 4 && d < 36 && maxH > 0.06 && !nearPlace) kelpList.push({ x, h: Math.min(maxH, 0.2 + rnd() * 0.35), phase: rnd() * 6, shade: rnd() });
+      if (d > 4 && d < 36 && maxH > 0.06 && !nearPlace) {
+        const sugar = rnd() < 0.3;
+        kelpList.push({ x, h: Math.min(maxH, sugar ? 0.12 + rnd() * 0.2 : 0.2 + rnd() * 0.35), phase: rnd() * 6, shade: rnd(), kind: sugar ? 'sukker' : 'tare', color: sugar ? (rnd() < 0.5 ? '#8a7a2c' : '#7d6a26') : ['#6b5a22', '#5e5520', '#76642a'][Math.floor(rnd() * 3)] });
+      }
     }
     // Steiner langs bunnen.
     rocks = [];
@@ -132,11 +141,34 @@
       rocks.push({ x, r: 0.015 + rnd() * 0.05, flat: 0.45 + rnd() * 0.3, tone: rnd() });
     }
     snow = Array.from({ length: 140 }, () => ({ x: rnd(), y: rnd(), z: 0.3 + rnd() * 0.9, r: 0.5 + rnd() * 1.3 }));
+    // Småtang, skjell og småstein langs bunnen.
+    details = [];
+    for (let x = 0.3; x < D.WORLD.width; x += 0.02 + rnd() * 0.06) {
+      const d = D.depthAt(D.seabedAt(x));
+      const r = rnd();
+      if (d < 60 && r < 0.35) details.push({ x, kind: 'weed', s: 0.015 + rnd() * 0.025, phase: rnd() * 6, color: rnd() < 0.5 ? 'rgba(90,110,40,0.85)' : 'rgba(120,60,50,0.8)' });
+      else if (d < 400 && r < 0.5) details.push({ x, kind: 'shell', s: 0.004 + rnd() * 0.005 });
+      else details.push({ x, kind: 'stone', s: 0.004 + rnd() * 0.008, tone: ['#7a756a', '#5d5a52', '#8a8070'][Math.floor(rnd() * 3)] });
+    }
+    // Store, uskarpe partikler helt foran (gir dybde: de er nærmere enn ubåten).
+    bokeh = Array.from({ length: 14 }, () => ({ x: rnd(), y: rnd(), r: 8 + rnd() * 26, a: 0.03 + rnd() * 0.05, ph: rnd() * 6 }));
+    // Dyr langt borte i tåka bak (bare pynt – de kan ikke trykkes på).
+    farLife = [];
+    for (const sp of D.SPECIES) {
+      if (sp.place.type !== 'water' || sp.secret) continue;
+      const n = sp.school ? 3 : sp.size > 0.2 ? 1 : 2;
+      for (let i = 0; i < n; i++) {
+        farLife.push({
+          kind: sp.kind, x: range(sp.place.x), y: D.yAtDepth(range(sp.place.depth)), dir: rnd() < 0.5 ? -1 : 1,
+          size: Math.max(0.02, sp.size * 0.45), speed: 0.02 + rnd() * 0.03, school: sp.school ? 8 : 0, ph: rnd() * 6,
+        });
+      }
+    }
   }
 
   function makeAnimal(sp, i) {
     const p = sp.place;
-    const a = { sp, phase: rnd() * 10, scale: 0.85 + rnd() * 0.3, dir: rnd() < 0.5 ? -1 : 1, glowUntil: 0, flash: 0 };
+    const a = { sp, phase: rnd() * 10, scale: 0.85 + rnd() * 0.3, dir: rnd() < 0.5 ? -1 : 1, glowUntil: 0, flash: 0, swim: rnd() * 10, pitch: 0, vy: 0 };
     a.size = sp.size * a.scale;
     if (p.type === 'bottom') {
       a.x = range(p.x);
@@ -173,6 +205,8 @@
   function updateAnimals(dt) {
     for (const a of animals) {
       const k = a.sp.kind;
+      const y0 = a.y;
+      animateBody(a, dt);
       if (a.sp.place.type === 'bottom') {
         if (a.speed) {
           a.x += a.dir * a.speed * dt;
@@ -209,7 +243,23 @@
       const top = k === 'seal' || k === 'porpoise' ? 0.03 : 0.04 + a.size * 0.25;
       a.y = clamp(a.y, top, Math.max(top, floor));
       a.x = clamp(a.x, 0.05, D.WORLD.width - 0.05);
+      // Hold styr på fart opp/ned, så dyret kan vippe nesa dit det svømmer.
+      a.vy += ((a.y - y0) / Math.max(dt, 0.001) - a.vy) * Math.min(1, dt * 3);
     }
+  }
+
+  /**
+   * Jevne bevegelser: dyret snur seg gradvis (som om det roterer rundt seg selv) i stedet for å
+   * speilvende, vipper med nesa opp og ned, og svømmetakten følger farten.
+   */
+  function animateBody(a, dt) {
+    if (a.face == null) a.face = a.dir;
+    a.face += (a.dir - a.face) * Math.min(1, dt * (a.size > 0.2 ? 1.6 : 4));
+    const v = Math.abs(a.speed || 0);
+    a.swim += dt * (0.6 + Math.min(1.6, v * 12) + Math.abs(a.dir - a.face) * 1.5);
+    const lim = a.size > 0.2 ? 0.18 : 0.35; // store dyr vipper mindre
+    const want = clamp(Math.atan2(a.vy || 0, Math.max(0.04, v)) * 0.5, -lim, lim);
+    a.pitch += (want - a.pitch) * Math.min(1, dt * 2);
   }
 
   // ---------- Ubåten ----------
@@ -339,6 +389,37 @@
     ctx.fill();
   }
 
+  /** Dyr langt borte: små, blasse silhuetter som beveger seg saktere enn alt foran (parallakse). */
+  function drawFarLife(dt) {
+    const par = 0.55;
+    const d = D.depthAt(cam.y + (H / S) * 0.5);
+    const c = mix(waterColor(d), [0, 0, 0], 0.25);
+    const q = (v) => Math.round(v / 8) * 8; // færre ulike farger = færre ferdigtegnede bilder
+    const color = rgb([q(c[0]), q(c[1]), q(c[2])]);
+    for (const f of farLife) {
+      f.x += f.dir * f.speed * dt;
+      if (f.x < 0 || f.x > D.WORLD.width) f.dir *= -1;
+      // Tegnes som om de var lenger unna: forskjøvet mot midten av skjermen.
+      const px = (f.x - cam.x * par - (W / S) * (1 - par) * 0.5) * S;
+      const py = (f.y - cam.y * par - (H / S) * (1 - par) * 0.4) * S;
+      const L = f.size * S;
+      if (px < -L * 3 || px > W + L * 3 || py < -L * 2 || py > H + L * 2) continue;
+      const img = A.silhouette(f.kind, Math.max(6, Math.round(L / 4) * 4), color);
+      ctx.globalAlpha = 0.55;
+      const n = f.school || 1;
+      for (let i = 0; i < n; i++) {
+        const ox = n > 1 ? Math.sin(i * 2.4 + f.ph) * L * 2.2 : 0;
+        const oy = n > 1 ? Math.cos(i * 1.7 + f.ph + time * 0.4) * L * 0.9 : Math.sin(time * 0.3 + f.ph) * L * 0.1;
+        ctx.save();
+        ctx.translate(px + ox, py + oy);
+        ctx.scale(f.dir, 1);
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
   function drawGodRays() {
     const depthTop = D.depthAt(Math.max(0, cam.y));
     if (depthTop > 120) return;
@@ -397,6 +478,29 @@
     g.addColorStop(1, rgb(mix(sand, [10, 10, 10], 0.6)));
     ctx.fillStyle = g;
     ctx.fill(path);
+    // Sandrifler og korn.
+    const sandPat = ctx.createPattern(A.sandTile(128), 'repeat');
+    if (sandPat) {
+      sandPat.setTransform(new DOMMatrix().translate(-cam.x * S, -cam.y * S).scale(Math.max(0.5, S / 500)));
+      ctx.fillStyle = sandPat;
+      ctx.fill(path);
+    }
+    // Mørkere jo lenger ned i bunnen (bunnen er en skråning bort fra oss, ikke en vegg).
+    const ao = ctx.createLinearGradient(0, 0, 0, H);
+    ao.addColorStop(0, 'rgba(0,0,0,0)');
+    ao.addColorStop(1, 'rgba(0,0,0,0.25)');
+    ctx.fillStyle = ao;
+    ctx.fill(path);
+    // Lys kant der sola treffer bunnen.
+    ctx.beginPath();
+    for (let px = -10; px <= W + 10; px += 6) {
+      const yy = sy(D.seabedAt(cam.x + px / S));
+      if (px === -10) ctx.moveTo(px, yy);
+      else ctx.lineTo(px, yy);
+    }
+    ctx.strokeStyle = `rgba(255,248,220,${0.08 + 0.3 * D.lightAt(d)})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
     // Steiner.
     for (const r of rocks) {
       const x = sx(r.x);
@@ -414,6 +518,14 @@
       ctx.ellipse(x, y, R, R * r.flat, 0, Math.PI, Math.PI * 2);
       ctx.fill();
     }
+    // Skjell, småstein og tangtuer.
+    for (const det of details) {
+      const x = sx(det.x);
+      if (x < -20 || x > W + 20) continue;
+      const y = sy(D.seabedAt(det.x)) + 1;
+      if (det.kind === 'weed') A.weed(ctx, x, y, det.s * S, time, det.phase, det.color);
+      else A.pebble(ctx, x, y, Math.max(1.2, det.s * S), det.tone, det.kind);
+    }
     // Lysmønster (kaustikk) på grunn bunn.
     if (d < 60) {
       const tile = A.causticTile(160);
@@ -422,9 +534,9 @@
         ctx.save();
         ctx.clip(path);
         ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = 0.2 * D.lightAt(d);
+        ctx.globalAlpha = 0.11 * D.lightAt(d);
         for (const [sp, ox] of [[0.05, 0], [-0.04, 60]]) {
-          pat.setTransform(new DOMMatrix().translate(-cam.x * S + time * S * sp + ox, -cam.y * S + time * S * sp * 0.6).scale(S / 260));
+          pat.setTransform(new DOMMatrix().translate(-cam.x * S + time * S * sp + ox, -cam.y * S + time * S * sp * 0.6).scale(S / 520));
           ctx.fillStyle = pat;
           ctx.fillRect(0, 0, W, H);
         }
@@ -437,8 +549,7 @@
     for (const k of kelpList) {
       const x = sx(k.x);
       if (x < -S * 0.3 || x > W + S * 0.3) continue;
-      const color = rgb(mix(hex('#6f6a24'), hex('#4b5a22'), k.shade));
-      A.kelp(ctx, x, sy(D.seabedAt(k.x)) + 2, k.h * S, time, k.phase, color);
+      A.kelp(ctx, x, sy(D.seabedAt(k.x)) + 2, k.h * S, time, k.phase, k.color, k.kind);
     }
   }
 
@@ -454,19 +565,35 @@
     const art = glowOnly ? A.GLOWS[k] : A.SPECIES_ART[k];
     if (!art) return;
     const L = a.size * S;
+    const turns = !isJelly(k) && k !== 'coral' && k !== 'wreck' && k !== 'bottle';
+    const face = a.face == null ? a.dir : a.face;
     const draw = (x, y, scale, ph) => {
       ctx.save();
       ctx.translate(x, y);
-      if (!isJelly(k) && k !== 'coral' && k !== 'wreck' && k !== 'bottle') ctx.scale(a.dir, 1);
+      if (turns) {
+        // Snur gradvis: smal midt i svingen, som når en fisk vender seg mot oss.
+        const f = Math.sign(face || 1) * Math.max(0.12, Math.abs(face));
+        if (a.sp.place.type === 'water') ctx.rotate(a.pitch * Math.sign(f));
+        ctx.scale(f, 1);
+      }
       if (a.sp.place.type === 'bottom' && k !== 'coral' && k !== 'wreck') ctx.translate(0, -L * (k === 'crab' ? 0.2 : k === 'urchin' ? 0 : 0.08));
-      art(ctx, L * scale, time + ph);
+      art(ctx, L * scale, a.swim + ph);
       ctx.restore();
     };
     const x = sx(a.x);
     const y = sy(a.y);
+    if (!glowOnly && a.sp.place.type === 'bottom' && k !== 'wreck' && k !== 'coral') {
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.beginPath();
+      ctx.ellipse(x, y + 1, L * 0.45, L * 0.08, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
     if (a.members) {
+      // Stimen speiles når den snur, så fiskene bytter plass i en myk bue.
       for (const m of a.members) {
-        draw(x + (m.ox + Math.sin(time * 0.8 + m.ph) * a.size * 0.4) * S, y + (m.oy + Math.cos(time * 0.6 + m.ph) * a.size * 0.3) * S, m.s, m.ph);
+        const ox = m.ox * face + Math.sin(time * 0.8 + m.ph) * a.size * 0.4;
+        const oy = m.oy + Math.cos(time * 0.6 + m.ph) * a.size * 0.3 + (1 - Math.abs(face)) * m.ox * 0.15;
+        draw(x + ox * S, y + oy * S, m.s, m.ph);
       }
     } else {
       draw(x, y, 1, a.phase);
@@ -507,7 +634,7 @@
     } finally {
       ctx = main;
     }
-    shadeCreatures();
+    if (quality.shade) shadeCreatures();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(fx, 0, 0);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -555,7 +682,8 @@
       const y = sy(a.y);
       if (x < -L || x > W + L || y < -L || y > H + L) continue;
       ctx.save();
-      ctx.translate(x, y);
+      // Litt nedsunket, så sanden foran dekker foten (den står ikke og svever på skråningen).
+      ctx.translate(x, y + L * 0.1);
       if (pl.kind === 'cave') A.caveMouth(ctx, L, time, pl.palette);
       else A.boatWreck(ctx, L);
       ctx.restore();
@@ -694,6 +822,55 @@
     }
   }
 
+  /** Uskarpe partikler helt foran kameraet. */
+  function drawBokeh() {
+    const d = D.depthAt(cam.y + (H / S) * 0.5);
+    const deep = d > 250;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const b of bokeh) {
+      const x = ((b.x * W * 1.6 - cam.x * S * 1.4) % (W * 1.6) + W * 1.6) % (W * 1.6) - W * 0.3;
+      const y = ((b.y * H * 1.6 - cam.y * S * 1.4 + Math.sin(time * 0.2 + b.ph) * 20) % (H * 1.6) + H * 1.6) % (H * 1.6) - H * 0.3;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, b.r);
+      const c = deep ? '120,200,255' : '230,250,240';
+      g.addColorStop(0, `rgba(${c},${b.a * (deep ? 0.6 : 1)})`);
+      g.addColorStop(0.7, `rgba(${c},${b.a * 0.4})`);
+      g.addColorStop(1, `rgba(${c},0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, b.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** Vannflata sett nedenfra: et glitrende speil med lys som bølger. */
+  function drawSurfaceUnderside() {
+    const y = sy(0);
+    if (y < -20 || y > H) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createLinearGradient(0, y, 0, y + S * 0.12);
+    g.addColorStop(0, 'rgba(200,250,250,0.35)');
+    g.addColorStop(1, 'rgba(200,250,250,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y, W, S * 0.12);
+    ctx.strokeStyle = 'rgba(230,255,255,0.35)';
+    ctx.lineWidth = 1.2;
+    for (let k = 0; k < 3; k++) {
+      ctx.beginPath();
+      for (let px = 0; px <= W; px += 8) {
+        const wx = cam.x + px / S;
+        const yy = y + S * (0.012 + k * 0.014) + Math.sin(wx * (22 + k * 9) + time * (1.4 + k * 0.5)) * S * 0.004 * (k + 1);
+        if (px) ctx.lineTo(px, yy);
+        else ctx.moveTo(px, yy);
+      }
+      ctx.globalAlpha = 0.6 - k * 0.18;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function drawSurface() {
     const y = sy(0);
     if (y < -20 || y > H + 20) return;
@@ -807,16 +984,19 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawBackground();
     drawFarRidge();
+    drawFarLife(dt);
     drawGodRays();
+    drawSurfaceUnderside();
     drawKelp();
-    drawSeabed();
     drawPlaces();
+    drawSeabed();
     const vis = drawWorldObjects();
     drawSub();
     drawSnow(dt);
     drawSurface();
     drawDarkness();
     drawGlows(vis);
+    drawBokeh();
     if (sleeping) {
       ctx.fillStyle = `rgba(0,0,0,${clamp((time - sleepStartedAt) / 40, 0, 0.92)})`;
       ctx.fillRect(0, 0, W, H);
@@ -829,6 +1009,7 @@
   function loop(now) {
     if (!running) return;
     const dt = Math.min(0.05, last ? (now - last) / 1000 : 0.016);
+    if (last && !inside && !document.hidden) adaptQuality(now - last);
     last = now;
     time += dt;
     if (inside) {
@@ -856,6 +1037,20 @@
     render(dt);
     drawMini();
     raf = requestAnimationFrame(loop);
+  }
+
+  function adaptQuality(ms) {
+    quality.ema += (Math.min(100, ms) - quality.ema) * 0.05;
+    quality.slow = quality.ema > 24 ? quality.slow + 1 : 0;
+    if (quality.slow < 120) return; // omtrent to sekunder med tregt bilde
+    quality.slow = 0;
+    quality.ema = 16;
+    if (quality.maxDpr > 1 && dpr > 1) {
+      quality.maxDpr = Math.max(1, Math.min(quality.maxDpr, dpr) - 0.5);
+      measure();
+    } else if (quality.shade) {
+      quality.shade = false;
+    }
   }
 
   /** Etterklang: mer «rom» ved vraket, revet og nær bunnen i dypet. */
@@ -1380,7 +1575,7 @@
     const r = wrap.getBoundingClientRect();
     W = Math.max(200, r.width);
     H = Math.max(200, r.height);
-    dpr = Math.min(1.5, window.devicePixelRatio || 1);
+    dpr = Math.min(quality.maxDpr, window.devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
     S = H / view;
