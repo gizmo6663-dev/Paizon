@@ -1,5 +1,5 @@
 /* Enkel service worker: gjør appen tilgjengelig uten nett etter første besøk. */
-const CACHE = 'paizon-v10';
+const CACHE = 'paizon-v11';
 const ASSETS = [
   './',
   'index.html',
@@ -17,6 +17,7 @@ const ASSETS = [
   'js/games/liquid.js',
   'js/ocean/data.js',
   'js/ocean/art.js',
+  'js/ocean/inside.js',
   'js/ocean/audio.js',
   'js/games/ocean.js',
   'sounds/ocean/knolhval.mp3',

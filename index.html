@@ -562,7 +562,7 @@
           <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
           <h2 id="ocean-setup-title">🐋 Havet</h2>
         </div>
-        <p class="muted">Kjør ubåten fra overflaten og helt ned til dyphavet i Norskehavet. Dra med fingeren for å kjøre, og trykk på dyrene.</p>
+        <p class="muted">Kjør ubåten fra overflaten og helt ned til dyphavet i Norskehavet. Dra med fingeren for å kjøre, trykk på dyrene, og svøm inn i grotter og vrak. Knip med to fingre for å se mer av havet.</p>
         <div class="mode-grid">
           <button class="mode-card" data-ocean="lar">
             <span class="mode-emoji" aria-hidden="true">🎓</span>
@@ -584,6 +584,10 @@
         <div class="choice-row" data-game="ocean" data-key="sleep">
           <button data-value="0">Av</button><button data-value="10">10 min</button><button data-value="20">20 min</button><button data-value="30">30 min</button>
         </div>
+        <p class="field-label">Musikk</p>
+        <div class="choice-row" data-game="ocean" data-key="music">
+          <button data-value="1">🎵 På</button><button data-value="0">Av</button>
+        </div>
         <p class="field-help">Dyrelydene til knølhval og spekkhogger er ekte undervannsopptak (DCLDE 2027 / NOAA, CC BY-SA 4.0).</p>
       </div>
     </section>
@@ -596,6 +600,7 @@
           <span aria-hidden="true">🏠</span>
         </button>
         <p id="ocean-mission" class="ocean-mission" aria-live="polite" hidden></p>
+        <button id="ocean-music-btn" class="icon-btn" aria-label="Musikk av eller på" title="Musikk">🎵</button>
         <button id="ocean-album-btn" class="icon-btn" aria-label="Fotobok" title="Fotobok">📖</button>
       </div>
       <div id="ocean-world" class="sim-world ocean-world">
@@ -608,6 +613,34 @@
           <div class="ocean-readout"><strong id="ocean-depth">0 m</strong><span id="ocean-zone">Overflaten</span></div>
         </div>
         <div id="ocean-banner" class="ocean-banner" aria-live="polite"></div>
+        <canvas id="ocean-mini" class="ocean-mini" aria-label="Kart over havet – trykk for å se hele kartet" role="button"></canvas>
+
+        <div id="ocean-map" class="ocean-map" role="dialog" aria-label="Kart" hidden>
+          <div class="ocean-album-head">
+            <h3>🗺️ Kart over havet</h3>
+            <button id="ocean-map-close" class="btn small ghost">✕ Lukk</button>
+          </div>
+          <p class="ocean-map-help">Trykk et sted på kartet, så kjører ubåten dit.</p>
+          <canvas id="ocean-map-canvas" class="ocean-map-canvas"></canvas>
+        </div>
+
+        <div id="ocean-inside" class="ocean-inside" hidden>
+          <canvas id="ocean-inside-canvas" aria-label="Inne i grotta eller vraket – dra for å se deg rundt, trykk på det du ser"></canvas>
+          <div class="ocean-inside-top">
+            <button id="ocean-inside-exit" class="btn small">⬅ Svøm ut</button>
+            <p id="ocean-inside-name" class="ocean-inside-name"></p>
+            <p id="ocean-inside-count" class="ocean-inside-count"></p>
+          </div>
+          <div id="ocean-inside-info" class="ocean-inside-info" hidden>
+            <p id="ocean-inside-info-new" class="ocean-new" hidden>📸 Ny i fotoboka!</p>
+            <h3 id="ocean-inside-info-name"></h3>
+            <p id="ocean-inside-info-text"></p>
+            <div class="ocean-card-actions">
+              <button id="ocean-inside-read" class="btn small">🗣️ Les opp</button>
+              <button id="ocean-inside-info-close" class="btn small ghost">✕ Lukk</button>
+            </div>
+          </div>
+        </div>
 
         <div id="ocean-card" class="ocean-card" role="dialog" aria-labelledby="ocean-card-name" hidden>
           <canvas id="ocean-card-art" class="ocean-card-art" aria-hidden="true"></canvas>
@@ -685,6 +718,7 @@
   <script src="js/games/liquid.js"></script>
   <script src="js/ocean/data.js"></script>
   <script src="js/ocean/art.js"></script>
+  <script src="js/ocean/inside.js"></script>
   <script src="js/ocean/audio.js"></script>
   <script src="js/games/ocean.js"></script>
   <script src="js/physics-kit.js"></script>

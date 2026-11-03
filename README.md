@@ -69,17 +69,30 @@ for å slippe kuler fra røret.
 
 ### 🐋 Havet
 Styr en liten ubåt fra stranda ned gjennom Norskehavet og Atlanterhavet – overflaten, tareskogen,
-det åpne havet, skumringssonen og dypet ned mot 3000 meter. Lyset blir borte jo dypere man kommer,
-og lykta på ubåten slår seg på. Lyden endrer seg også: bølgeskvulp ved overflaten, dovere sus og en lav
-dur i dypet, og mer etterklang ved vraket og korallrevet. 24 dyr og ting kan oppdages
-(f.eks. torsk, hummer, spekkhogger, knølhval, lysprikkfisk, håkjerring, marulk og et skipsvrak).
-- **Lær** – oppdrag («Finn en krabbe», «Dykk ned til 100 meter» …), og kortene leses opp.
+det åpne havet, skumringssonen og dypet ned mot 3000 meter. Havet er mange skjermer bredt og dypt;
+knip med to fingre (eller bruk musehjulet) for å se mer eller mindre av det. Minikartet nede til
+høyre viser hvor man er, og på det store kartet kan man trykke et sted så ubåten kjører dit.
+
+Lyset blir borte jo dypere man kommer, og lykta på ubåten slår seg på. Lyden endrer seg også:
+bølgeskvulp ved overflaten, dovere sus og en lav dur i dypet, og mer etterklang ved grotter og vrak.
+En rolig bakgrunnsmusikk (lange akkorder og glassklare toner) lages i appen mens den spilles, og kan
+slås av i oppsettet eller med 🎵-knappen.
+
+**Grotter og vrak:** Tareskoggrotta, den gamle fiskebåten, skipsvraket og Dyphavsgrotta kan man
+svømme inn i. Da ser man rommet med egne øyne: dra for å se seg rundt (lagene i bildet flytter seg
+ulikt, så det får dybde), og i mørke steder er fingeren en lommelykt. Der inne finnes dyr som bare bor
+der (steinbit, sjønellik, havål, dypvannsreke, glassvamp og slangestjerne) og ting som skipsklokka,
+rattet og en gammel kiste.
+
+30 dyr og ting kan oppdages i fotoboka.
+- **Lær** – oppdrag («Finn en krabbe», «Utforsk en grotte», «Dykk ned til 100 meter» …), og alt leses opp.
 - **Oppdag** – fri utforsking med fotobok, og noen hemmeligheter å finne.
 - **Rolig** – ingen kort og ingen oppdrag; ubåten glir av seg selv når man slipper. Valgfri sovetimer
   som demper lyd og lys.
 
 Knølhval og spekkhogger er ekte undervannsopptak fra NOAA/DCLDE (CC BY-SA 4.0), se
-`sounds/ocean/LISENS.md`.
+`sounds/ocean/LISENS.md`. Alle figurene er tegnet med kode (Canvas 2D); dyrene får en lys kant
+på ryggen og en mørk kant under, så de ser mer runde ut.
 
 ### Felles
 - Lyd kan slås av, og alt leses opp med norsk talesyntese når enheten har det
@@ -147,7 +160,7 @@ js/logic.js         Ren spill-logikk (testes med node --test)
 js/media.js         Lydeffekter, bokstavlyder, opptak, opplesning og konfetti
 js/core.js          Felles skall: skjermer, lagring, innstillinger, ferdigskjerm
 js/games/*.js       Ett skript per spill (spell, count, memory, shapes, build, liquid, domino, marble, ocean)
-js/ocean/           Havet: data (arter, soner, dybde), tegninger og lydbilde
+js/ocean/           Havet: data (arter, steder, soner, dybde), tegninger, innsiden av grotter og vrak, lyd og musikk
 js/physics-kit.js   Felles hjelpere for domino og kulebane (Matter.js-scene, tegning, nivå klart)
 js/fluid.js         Væskesimulatoren (testes med node --test)
 js/vendor/          Matter.js 0.20.0 (MIT) for byggeklosser, domino og kulebane
