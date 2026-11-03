@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Paizon</string>
+    <string name="title_activity_main">Paizon</string>
+    <string name="package_name">no.paizon.app</string>
+    <string name="custom_url_scheme">no.paizon.app</string>
+</resources>
