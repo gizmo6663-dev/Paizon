@@ -1,5 +1,5 @@
 /* Enkel service worker: gjør appen tilgjengelig uten nett etter første besøk. */
-const CACHE = 'paizon-v15';
+const CACHE = 'paizon-v16';
 const ASSETS = [
   './',
   'index.html',
@@ -33,6 +33,11 @@ const ASSETS = [
   'js/papir/critters.js',
   'js/papir/land.js',
   'js/papir/apply.js',
+  'js/space/core.js',
+  'js/space/proto2d.js',
+  'js/space/proto3d.js',
+  'js/games/space.js',
+  'js/vendor/three.module.min.js',
   'sounds/ocean/knolhval.mp3',
   'sounds/ocean/spekkhogger.mp3',
   'js/physics-kit.js',

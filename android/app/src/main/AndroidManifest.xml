@@ -35,4 +35,5 @@
     <!-- Brukes når en voksen spiller inn egne bokstavlyder i «Stave ord». -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 </manifest>

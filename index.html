@@ -73,6 +73,11 @@
           <span class="game-name">Skogen</span>
           <span class="game-desc">Gå på tur – dag og natt, sommer og vinter</span>
         </button>
+        <button class="game-card feature space-card" data-go="space-setup" style="--card: #1b1f4a">
+          <span class="game-emoji" aria-hidden="true">🚀</span>
+          <span class="game-name">Rommet <small class="proto-badge">prøveversjon</small></span>
+          <span class="game-desc">Skyt opp en rakett og fly til Månen</span>
+        </button>
         <button class="game-card feature" data-go="sky-setup" style="--card: #3a7bc8">
           <span class="game-emoji" aria-hidden="true">🦅</span>
           <span class="game-name">Himmelen</span>
@@ -817,6 +822,47 @@
       </div>
     </section>
 
+    <!-- ===================== ROMMET (PRØVEVERSJON) ===================== -->
+    <section id="screen-space-setup" class="screen" aria-labelledby="space-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="space-setup-title">🚀 Rommet <small class="proto-badge">prøveversjon</small></h2>
+        </div>
+        <p class="muted">To prøveversjoner av det samme øyeblikket: oppskytingen, bane rundt jorda, turen til Månen og landingen. Prøv begge og si hvilken du liker best. 🎧 Bruk gjerne hodetelefoner – lyden er en stor del av opplevelsen.</p>
+        <div class="mode-grid space-modes">
+          <button class="mode-card" data-space="2d">
+            <span class="mode-emoji" aria-hidden="true">✂️</span>
+            <span class="mode-name">2D – papirteater</span>
+            <span class="mode-desc">Papirklipp foran lysende himmel og planeter. Zoomer ut i ett strekk og viser de ekte avstandene.</span>
+          </button>
+          <button class="mode-card" data-space="3d">
+            <span class="mode-emoji" aria-hidden="true">🧊</span>
+            <span class="mode-name">3D – papirmodeller i ekte lys</span>
+            <span class="mode-desc">Kameraet sveiper som i en film: opp gjennom skyene, rundt jorda og ned på Månen.</span>
+          </button>
+        </div>
+        <p class="field-help">3D krever mer av telefonen. Rister og vibrerer under oppskytingen.</p>
+      </div>
+    </section>
+
+    <section id="screen-space" class="screen game-screen fullscreen-game" aria-label="Rommet">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="space-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <p id="space-readout" class="space-readout" aria-live="polite"></p>
+      </div>
+      <div id="space-world" class="sim-world space-world">
+        <p id="space-count" class="space-count" aria-hidden="true"></p>
+        <div id="space-radio" class="space-radio" hidden><span aria-hidden="true">📻</span><p id="space-radio-text"></p></div>
+        <button id="space-ff" class="space-ff" hidden>⏩ Hold for å fly fortere</button>
+        <button id="space-action" class="space-action" hidden></button>
+        <p id="space-loading" class="space-loading" hidden></p>
+      </div>
+    </section>
+
     <!-- ===================== FERDIG (felles) ===================== -->
     <section id="screen-done" class="screen" aria-labelledby="done-title">
       <div class="panel center">
@@ -878,6 +924,10 @@
   <script src="js/papir/critters.js"></script>
   <script src="js/papir/land.js"></script>
   <script src="js/papir/apply.js"></script>
+  <script src="js/space/core.js"></script>
+  <script src="js/space/proto2d.js"></script>
+  <script src="js/space/proto3d.js"></script>
+  <script src="js/games/space.js"></script>
   <script src="js/physics-kit.js"></script>
   <script src="js/games/domino.js"></script>
   <script src="js/games/marble.js"></script>

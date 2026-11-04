@@ -112,6 +112,22 @@ I Rolig («Skykiker») ligger man i gresset og ser skyene drive forbi – av og 
 
 Fuglesang, dyrelyder, vind og musikk i Skogen og Himmelen lages i appen (Web Audio), ikke av opptak.
 
+### 🚀 Rommet (prøveversjon)
+To prøveversjoner av samme reise, så man kan sammenligne 2D og 3D før man velger retning:
+hold inne knappen til motorene tenner (3-2-1), løft av gjennom skyene, slipp første trinn ved
+60 km, se jordkrumningen komme fram, gå i bane rundt Jorda, fly til Månen, land og gå ut.
+På Månen trykker man for å hoppe (tyngdekraft 1/6) og drar for å gå; fotsporene blir liggende.
+- **2D – papirteater:** papirkulisser i lag. Kameraet bruker en logaritmisk høydeskala, så både
+  tårnet, flyene i 10 km, romstasjonen i 400 km og hele Jorda får plass. På vei til Månen zoomes
+  det ut til ekte målestokk, der alle planetene får plass mellom Jorda og Månen.
+- **3D – papirmodeller i ekte lys:** raketten og tårnet er modeller med tegneserielys og
+  blekkontur, mens skyer, røyk, flagg og astronaut er papirutklipp. Lastes først når man velger
+  3D (three.js), og er tyngre for eldre telefoner.
+
+Lyden lages i appen: dyp motorbrumming som blir tynnere jo mindre luft det er, knitring, vind,
+radiomeldinger fra bakkekontrollen (talesyntese med pip og støy), pusting i romdrakten og
+musikk som svulmer når Jorda og Månen kommer til syne. Telefonen rister mens motorene drønner, ved trinnskillet og når man lander.
+
 ### 🎨 Papirdyr (stil 4a)
 Alle dyrene i Havet, Skogen og Himmelen tegnes i stil 4a fra designhandoffen: papirklipp med
 flate farger, én sammenhengende mørk kontur rundt hele dyret, papirfiber og én skygge (lys fra
@@ -191,14 +207,15 @@ css/style.css       Utseende
 js/logic.js         Ren spill-logikk (testes med node --test)
 js/media.js         Lydeffekter, bokstavlyder, opptak, opplesning og konfetti
 js/core.js          Felles skall: skjermer, lagring, innstillinger, ferdigskjerm
-js/games/*.js       Ett skript per spill (spell, count, memory, shapes, build, liquid, domino, marble, ocean, forest, sky)
+js/games/*.js       Ett skript per spill (spell, count, memory, shapes, build, liquid, domino, marble, ocean, forest, sky, space)
 js/explore/         Felles for Skogen og Himmelen: faktakort, fotobok, lyd og musikk (kit.js) og dyretegninger
 js/forest/, js/sky/ Innhold (data.js) og kulisser (art.js) for Skogen og Himmelen
 js/papir/           Papirdyrene (stil 4a): utklipp og fiber (core), fisk, havliv og småkryp, firbeinte og fugler
+js/space/           Rommet: felles lyd, kloder og papirutklipp (core), 2D-versjonen (proto2d) og 3D-versjonen (proto3d)
 js/ocean/           Havet: data (arter, steder, soner, dybde), tegninger, innsiden av grotter og vrak, lyd og musikk
 js/physics-kit.js   Felles hjelpere for domino og kulebane (Matter.js-scene, tegning, nivå klart)
 js/fluid.js         Væskesimulatoren (testes med node --test)
-js/vendor/          Matter.js 0.20.0 (MIT) for byggeklosser, domino og kulebane
+js/vendor/          Matter.js 0.20.0 (MIT) for byggeklosser, domino og kulebane, three.js r170 (MIT) for Rommet i 3D
 sounds/letters/     Bokstavlyder (mp3)
 sounds/ocean/       Ekte hvallyder (CC BY-SA 4.0, se LISENS.md)
 sw.js               Service worker for offline-bruk
