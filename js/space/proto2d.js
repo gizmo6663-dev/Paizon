@@ -567,7 +567,7 @@
     // Landing og tur på Månen
     // =====================================================================
     function drawMoon(st) {
-      const m = H * 0.08; // piksler per meter
+      const m = Math.min(H * 0.08, W * 0.11); // piksler per meter (smalere på stående telefon, så flagget får plass)
       const y0 = H * 0.8;
       const a = st.astro;
       if (st.phase !== 'moon') camX = 0;

@@ -523,7 +523,8 @@ void main() {
     flameC.position.y = 1.4;
     lander.root.add(flameC);
     moonScene.add(lander.root);
-    const dustMat = new THREE.SpriteMaterial({ map: puffTex('#aaa69e'), transparent: true, depthWrite: false });
+    // Myke støvskyer uten kant: på Månen sprer støvet seg lavt og flatt, uten luft som bremser det.
+    const dustMat = new THREE.SpriteMaterial({ map: radialTex([[0, 'rgba(196,190,178,0.85)'], [0.45, 'rgba(180,174,162,0.45)'], [1, 'rgba(170,165,155,0)']], 64), transparent: true, depthWrite: false });
     const dust = [];
     for (let i = 0; i < 120; i++) {
       const sp = new THREE.Sprite(dustMat.clone());
@@ -805,9 +806,9 @@ void main() {
           const sp = 18 + Math.random() * 30;
           p.alive = true;
           p.age = 0;
-          p.vel.set(Math.cos(a) * sp, 3 + Math.random() * 7, Math.sin(a) * sp);
-          p.sp.position.set(Math.cos(a) * 1.5, gy + 0.3, Math.sin(a) * 1.5);
-          p.size = 0.9 + Math.random() * 1.1;
+          p.vel.set(Math.cos(a) * sp, 0.8 + Math.random() * 2.4, Math.sin(a) * sp);
+          p.sp.position.set(Math.cos(a) * 1.5, gy + 0.6, Math.sin(a) * 1.5);
+          p.size = 1.6 + Math.random() * 1.8;
           p.sp.scale.setScalar(p.size);
           p.sp.material.opacity = 0.9;
           p.sp.visible = true;
