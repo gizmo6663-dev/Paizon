@@ -69,17 +69,78 @@ for å slippe kuler fra røret.
 
 ### 🐋 Havet
 Styr en liten ubåt fra stranda ned gjennom Norskehavet og Atlanterhavet – overflaten, tareskogen,
-det åpne havet, skumringssonen og dypet ned mot 3000 meter. Lyset blir borte jo dypere man kommer,
-og lykta på ubåten slår seg på. Lyden endrer seg også: bølgeskvulp ved overflaten, dovere sus og en lav
-dur i dypet, og mer etterklang ved vraket og korallrevet. 24 dyr og ting kan oppdages
-(f.eks. torsk, hummer, spekkhogger, knølhval, lysprikkfisk, håkjerring, marulk og et skipsvrak).
-- **Lær** – oppdrag («Finn en krabbe», «Dykk ned til 100 meter» …), og kortene leses opp.
+det åpne havet, skumringssonen og dypet ned mot 3000 meter. Havet er mange skjermer bredt og dypt;
+knip med to fingre (eller bruk musehjulet) for å se mer eller mindre av det. Minikartet nede til
+høyre viser hvor man er, og på det store kartet kan man trykke et sted så ubåten kjører dit.
+
+Lyset blir borte jo dypere man kommer, og lykta på ubåten slår seg på. Lyden endrer seg også:
+bølgeskvulp ved overflaten, dovere sus og en lav dur i dypet, og mer etterklang ved grotter og vrak.
+En rolig bakgrunnsmusikk (lange akkorder og glassklare toner) lages i appen mens den spilles, og kan
+slås av i oppsettet eller med 🎵-knappen.
+
+**Grotter og vrak:** Tareskoggrotta, den gamle fiskebåten, skipsvraket og Dyphavsgrotta kan man
+svømme inn i. Da ser man rommet med egne øyne: dra for å se seg rundt (lagene i bildet flytter seg
+ulikt, så det får dybde), og i mørke steder er fingeren en lommelykt. Der inne finnes dyr som bare bor
+der (steinbit, sjønellik, havål, dypvannsreke, glassvamp og slangestjerne) og ting som skipsklokka,
+rattet og en gammel kiste.
+
+30 dyr og ting kan oppdages i fotoboka.
+- **Lær** – oppdrag («Finn en krabbe», «Utforsk en grotte», «Dykk ned til 100 meter» …), og alt leses opp.
 - **Oppdag** – fri utforsking med fotobok, og noen hemmeligheter å finne.
 - **Rolig** – ingen kort og ingen oppdrag; ubåten glir av seg selv når man slipper. Valgfri sovetimer
   som demper lyd og lys.
 
 Knølhval og spekkhogger er ekte undervannsopptak fra NOAA/DCLDE (CC BY-SA 4.0), se
-`sounds/ocean/LISENS.md`.
+`sounds/ocean/LISENS.md`. Alle figurene er tegnet med kode (Canvas 2D); dyrene får en lys kant
+på ryggen og en mørk kant under, så de ser mer runde ut.
+
+### 🌲 Skogen
+Gå langs en sti gjennom norsk skog: trykk der du vil gå. Klokka (morgen, dag, kveld, natt) og
+årstidknappen (vår, sommer, høst, vinter) forandrer lyset, trærne, været og hvem som er ute – ugla og
+reven kommer fram om natta, blåbær om sommeren, fluesopp om høsten og spor i snøen om vinteren.
+Man kan kikke under den store steinen, inn i det hule treet, i maurtua, under stubben og i dammen.
+👂 spiller en fuglesang eller et dyrelyd fra et dyr i nærheten – finn dyret og trykk på det.
+27 dyr, planter og trær (blant annet elg, rådyr, rev, hare, ekorn, kattugle, flaggspett, gjøk og
+kjøttmeis), og gaupe og brunbjørn som hemmeligheter i Oppdag.
+
+### 🦅 Himmelen
+Fly som måke, ørn eller spurv – fra hagen og hustakene, over skogen og fjellet, opp gjennom skyene
+og helt opp dit flyene flyr. Fuglene flyr ulikt: måken glir, ørna stiger raskt i varm luft som
+stiger (synlige søyler), og spurven flakser. Værknappen veksler mellom sol, skyer med regn,
+tordensky og regnbue, og natt med nordlys og stjerneskudd. 25 fugler og ting i lufta.
+I Rolig («Skykiker») ligger man i gresset og ser skyene drive forbi – av og til blir en sky til et dyr.
+
+Fuglesang, dyrelyder, vind og musikk i Skogen og Himmelen lages i appen (Web Audio), ikke av opptak.
+
+### 🚀 Rommet (prøveversjon)
+To prøveversjoner av samme reise, så man kan sammenligne 2D og 3D før man velger retning:
+hold inne knappen til motorene tenner (3-2-1), løft av gjennom skyene, slipp første trinn ved
+60 km, se jordkrumningen komme fram, gå i bane rundt Jorda, fly til Månen, land og gå ut.
+På Månen trykker man for å hoppe (tyngdekraft 1/6) og drar for å gå; fotsporene blir liggende.
+- **2D – papirteater:** papirkulisser i lag. Kameraet bruker en logaritmisk høydeskala, så både
+  tårnet, flyene i 10 km, romstasjonen i 400 km og hele Jorda får plass. På vei til Månen zoomes
+  det ut til ekte målestokk, der alle planetene får plass mellom Jorda og Månen.
+- **3D – papirmodeller i ekte lys:** raketten og tårnet er modeller med tegneserielys og
+  blekkontur, mens skyer, røyk, flagg og astronaut er papirutklipp. Lastes først når man velger
+  3D (three.js), og er tyngre for eldre telefoner.
+
+Lyden lages i appen: dyp motorbrumming som blir tynnere jo mindre luft det er, knitring, vind,
+radiomeldinger fra bakkekontrollen (talesyntese med pip og støy), pusting i romdrakten og
+musikk som svulmer når Jorda og Månen kommer til syne. Telefonen rister mens motorene drønner, ved trinnskillet og når man lander.
+
+### 🎨 Papirdyr (stil 4a)
+Alle dyrene i Havet, Skogen og Himmelen tegnes i stil 4a fra designhandoffen: papirklipp med
+flate farger, én sammenhengende mørk kontur rundt hele dyret, papirfiber og én skygge (lys fra
+øvre høyre). Dyrene tegnes i kode ut fra en artsbeskrivelse og en felles rigg per dyretype:
+- **Fisk** (og hval og sel): én svømmebølge gjennom hele kroppen, så finner og mønster følger med.
+- **Firbeinte**: rør-bein med gangesyklus, pukkelkropp, og hopp for hare og ekorn.
+- **Fugler**: vinger i perspektiv når de flyr, og egen positur når de sitter.
+- **Havliv og småkryp** uten rigg: maneter, sjøstjerner, krepsdyr, blekksprut, sopp og bær.
+
+En ny art er bare et nytt dataobjekt i `js/papir/`. Kontur, fiber og skygge legges på ett sted
+(`js/papir/core.js`), og ferdige utklipp lagres per art, størrelse og bilde i bevegelsen, så
+stimer og flokker gjenbruker dem. Terrenget (havbunn, tare, fjell, trær, bakke og hus) er laget
+i samme stil: flate papirlag med blekkant og papirskygge.
 
 ### Felles
 - Lyd kan slås av, og alt leses opp med norsk talesyntese når enheten har det
@@ -146,11 +207,15 @@ css/style.css       Utseende
 js/logic.js         Ren spill-logikk (testes med node --test)
 js/media.js         Lydeffekter, bokstavlyder, opptak, opplesning og konfetti
 js/core.js          Felles skall: skjermer, lagring, innstillinger, ferdigskjerm
-js/games/*.js       Ett skript per spill (spell, count, memory, shapes, build, liquid, domino, marble, ocean)
-js/ocean/           Havet: data (arter, soner, dybde), tegninger og lydbilde
+js/games/*.js       Ett skript per spill (spell, count, memory, shapes, build, liquid, domino, marble, ocean, forest, sky, space)
+js/explore/         Felles for Skogen og Himmelen: faktakort, fotobok, lyd og musikk (kit.js) og dyretegninger
+js/forest/, js/sky/ Innhold (data.js) og kulisser (art.js) for Skogen og Himmelen
+js/papir/           Papirdyrene (stil 4a): utklipp og fiber (core), fisk, havliv og småkryp, firbeinte og fugler
+js/space/           Rommet: felles lyd, kloder og papirutklipp (core), 2D-versjonen (proto2d) og 3D-versjonen (proto3d)
+js/ocean/           Havet: data (arter, steder, soner, dybde), tegninger, innsiden av grotter og vrak, lyd og musikk
 js/physics-kit.js   Felles hjelpere for domino og kulebane (Matter.js-scene, tegning, nivå klart)
 js/fluid.js         Væskesimulatoren (testes med node --test)
-js/vendor/          Matter.js 0.20.0 (MIT) for byggeklosser, domino og kulebane
+js/vendor/          Matter.js 0.20.0 (MIT) for byggeklosser, domino og kulebane, three.js r170 (MIT) for Rommet i 3D
 sounds/letters/     Bokstavlyder (mp3)
 sounds/ocean/       Ekte hvallyder (CC BY-SA 4.0, se LISENS.md)
 sw.js               Service worker for offline-bruk

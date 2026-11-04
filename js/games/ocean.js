@@ -10,18 +10,26 @@
   const D = window.PaizonOceanData;
   const A = window.PaizonOceanArt;
   const AU = window.PaizonOceanAudio;
+  const IN = window.PaizonOceanInside;
   const Sound = window.PaizonSound;
   const Speech = window.PaizonSpeech;
   const { $, $$ } = P;
   if (!D || !A || !AU) return;
 
-  const settings = P.settings('ocean', { sleep: 0 });
+  const settings = P.settings('ocean', { sleep: 0, music: 1 });
 
   const canvas = $('#ocean-canvas');
-  const ctx = canvas.getContext('2d');
+  let ctx = canvas.getContext('2d'); // byttes midlertidig til dyrelaget i drawWorldObjects
   const wrap = $('#ocean-world');
   const dark = document.createElement('canvas'); // mørket i dypet, med lykt-kjegla skåret ut
   const dctx = dark.getContext('2d');
+  // Dyrene tegnes først i et eget lag, så de kan få lys på ryggen og skygge under (se shadeCreatures).
+  const fx = document.createElement('canvas');
+  const fxc = fx.getContext('2d');
+  const edge = document.createElement('canvas');
+  const ec = edge.getContext('2d');
+  const mini = $('#ocean-mini');
+  const mctx = mini.getContext('2d');
 
   let mode = 'lar';
   let running = false;
@@ -29,6 +37,11 @@
   let W = 0; // lerretets bredde (CSS-piksler)
   let H = 0;
   let S = 600; // piksler per vh
+  // Hvor mange vh kameraet viser i høyden. Større tall = mer oversikt (knip for å zoome).
+  const VIEW_MIN = 1.1;
+  const VIEW_MAX = 3.4;
+  let view = 1.5;
+  const SUB_LEN = 0.075; // ubåtens lengde i vh
   let dpr = 1;
   let time = 0;
   let last = 0;
@@ -37,6 +50,9 @@
   let animals = [];
   let kelpList = [];
   let rocks = [];
+  let details = [];
+  let bokeh = [];
+  let farLife = [];
   let snow = [];
   let bubbles = [];
   let sparks = [];
@@ -52,6 +68,13 @@
   let sleeping = false;
   let nextWhale = 0;
   let lastBubble = 0;
+  // Kvaliteten tilpasser seg: går bildeflyten tregt, tegnes det med færre piksler, og til slutt
+  // uten lyskantene på dyrene. Slik blir det jevnt også på eldre nettbrett.
+  const quality = { maxDpr: 2, shade: true, slow: 0, ema: 16 };
+  let visited = new Set(); // steder man har vært inne i
+  let inside = null; // stedet man er inne i nå
+  let pinch = null;
+  const pointers = new Map();
 
   const album = new Set(P.store.get('ocean.album', []));
 
@@ -97,27 +120,55 @@
     animals = [];
     for (const sp of D.SPECIES) {
       if (sp.secret && mode !== 'oppdag') continue;
+      if (sp.place.type === 'inside') continue;
       for (let i = 0; i < sp.count; i++) animals.push(makeAnimal(sp, i));
     }
     // Tare langs kysten der det er 5–35 meter dypt.
     kelpList = [];
-    for (let x = 0.3; x < 1.7; x += 0.035 + rnd() * 0.03) {
+    for (let x = 0.5; x < 6.2; x += 0.035 + rnd() * 0.035) {
       const d = D.depthAt(D.seabedAt(x));
       // Taren blir aldri høyere enn vannet er dypt (den skal ikke stikke opp i lufta).
       const maxH = (D.seabedAt(x) - 0.04) * 0.85;
-      if (d > 4 && d < 36 && maxH > 0.06) kelpList.push({ x, h: Math.min(maxH, 0.25 + rnd() * 0.4), phase: rnd() * 6, shade: rnd() });
+      const nearPlace = D.PLACES.some((pl) => pl.kind !== 'ship' && Math.abs(pl.x - x) < pl.size * 0.45);
+      if (d > 4 && d < 36 && maxH > 0.06 && !nearPlace) {
+        const sugar = rnd() < 0.3;
+        kelpList.push({ x, h: Math.min(maxH, sugar ? 0.12 + rnd() * 0.2 : 0.2 + rnd() * 0.35), phase: rnd() * 6, shade: rnd(), kind: sugar ? 'sukker' : 'tare', color: sugar ? (rnd() < 0.5 ? '#8a7a2c' : '#7d6a26') : ['#6b5a22', '#5e5520', '#76642a'][Math.floor(rnd() * 3)] });
+      }
     }
     // Steiner langs bunnen.
     rocks = [];
-    for (let x = 0.1; x < D.WORLD.width; x += 0.08 + rnd() * 0.25) {
-      rocks.push({ x, r: 0.02 + rnd() * 0.07, flat: 0.45 + rnd() * 0.3, tone: rnd() });
+    for (let x = 0.1; x < D.WORLD.width; x += 0.06 + rnd() * 0.2) {
+      rocks.push({ x, r: 0.015 + rnd() * 0.05, flat: 0.45 + rnd() * 0.3, tone: rnd() });
     }
     snow = Array.from({ length: 140 }, () => ({ x: rnd(), y: rnd(), z: 0.3 + rnd() * 0.9, r: 0.5 + rnd() * 1.3 }));
+    // Småtang, skjell og småstein langs bunnen.
+    details = [];
+    for (let x = 0.3; x < D.WORLD.width; x += 0.02 + rnd() * 0.06) {
+      const d = D.depthAt(D.seabedAt(x));
+      const r = rnd();
+      if (d < 60 && r < 0.35) details.push({ x, kind: 'weed', s: 0.015 + rnd() * 0.025, phase: rnd() * 6, color: rnd() < 0.5 ? 'rgba(90,110,40,0.85)' : 'rgba(120,60,50,0.8)' });
+      else if (d < 400 && r < 0.5) details.push({ x, kind: 'shell', s: 0.004 + rnd() * 0.005 });
+      else details.push({ x, kind: 'stone', s: 0.004 + rnd() * 0.008, tone: ['#7a756a', '#5d5a52', '#8a8070'][Math.floor(rnd() * 3)] });
+    }
+    // Store, uskarpe partikler helt foran (gir dybde: de er nærmere enn ubåten).
+    bokeh = Array.from({ length: 14 }, () => ({ x: rnd(), y: rnd(), r: 8 + rnd() * 26, a: 0.03 + rnd() * 0.05, ph: rnd() * 6 }));
+    // Dyr langt borte i tåka bak (bare pynt – de kan ikke trykkes på).
+    farLife = [];
+    for (const sp of D.SPECIES) {
+      if (sp.place.type !== 'water' || sp.secret) continue;
+      const n = sp.school ? 3 : sp.size > 0.2 ? 1 : 2;
+      for (let i = 0; i < n; i++) {
+        farLife.push({
+          kind: sp.kind, x: range(sp.place.x), y: D.yAtDepth(range(sp.place.depth)), dir: rnd() < 0.5 ? -1 : 1,
+          size: Math.max(0.02, sp.size * 0.45), speed: 0.02 + rnd() * 0.03, school: sp.school ? 8 : 0, ph: rnd() * 6,
+        });
+      }
+    }
   }
 
   function makeAnimal(sp, i) {
     const p = sp.place;
-    const a = { sp, phase: rnd() * 10, scale: 0.85 + rnd() * 0.3, dir: rnd() < 0.5 ? -1 : 1, glowUntil: 0, flash: 0 };
+    const a = { sp, phase: rnd() * 10, scale: 0.85 + rnd() * 0.3, dir: rnd() < 0.5 ? -1 : 1, glowUntil: 0, flash: 0, swim: rnd() * 10, pitch: 0, vy: 0 };
     a.size = sp.size * a.scale;
     if (p.type === 'bottom') {
       a.x = range(p.x);
@@ -154,6 +205,8 @@
   function updateAnimals(dt) {
     for (const a of animals) {
       const k = a.sp.kind;
+      const y0 = a.y;
+      animateBody(a, dt);
       if (a.sp.place.type === 'bottom') {
         if (a.speed) {
           a.x += a.dir * a.speed * dt;
@@ -180,7 +233,7 @@
         if (Math.abs(a.y - a.ty) < 0.01 || rnd() < 0.002) a.ty = D.yAtDepth(lerp(a.d0, a.d1, rnd()));
         a.y += clamp(a.ty - a.y, -1, 1) * 0.15 * dt;
         // Små fisk svinger unna ubåten.
-        if (a.size < 0.12 && Math.hypot(a.x - sub.x, a.y - sub.y) < 0.18) {
+        if (a.size < 0.12 && Math.hypot(a.x - sub.x, a.y - sub.y) < 0.12) {
           a.dir = a.x < sub.x ? -1 : 1;
           a.y += (a.y < sub.y ? -1 : 1) * 0.08 * dt;
         }
@@ -190,17 +243,41 @@
       const top = k === 'seal' || k === 'porpoise' ? 0.03 : 0.04 + a.size * 0.25;
       a.y = clamp(a.y, top, Math.max(top, floor));
       a.x = clamp(a.x, 0.05, D.WORLD.width - 0.05);
+      // Hold styr på fart opp/ned, så dyret kan vippe nesa dit det svømmer.
+      a.vy += ((a.y - y0) / Math.max(dt, 0.001) - a.vy) * Math.min(1, dt * 3);
     }
+  }
+
+  /**
+   * Jevne bevegelser: dyret snur seg gradvis (som om det roterer rundt seg selv) i stedet for å
+   * speilvende, vipper med nesa opp og ned, og svømmetakten følger farten.
+   */
+  function animateBody(a, dt) {
+    if (a.face == null) a.face = a.dir;
+    a.face += (a.dir - a.face) * Math.min(1, dt * (a.size > 0.2 ? 1.6 : 4));
+    const v = Math.abs(a.speed || 0);
+    a.swim += dt * (0.6 + Math.min(1.6, v * 12) + Math.abs(a.dir - a.face) * 1.5);
+    const lim = a.size > 0.2 ? 0.18 : 0.35; // store dyr vipper mindre
+    const want = clamp(Math.atan2(a.vy || 0, Math.max(0.04, v)) * 0.5, -lim, lim);
+    a.pitch += (want - a.pitch) * Math.min(1, dt * 2);
   }
 
   // ---------- Ubåten ----------
   function updateSub(dt) {
-    const maxSpeed = mode === 'rolig' ? 0.22 : 0.42;
+    const maxSpeed = (mode === 'rolig' ? 0.3 : 0.6) * Math.sqrt(view / 1.5);
     // Rolig-modus: autopilot glir rolig rundt når ingen har rørt skjermen på en stund.
     if (mode === 'rolig' && !pointer && time - lastInput > 6 && (sub.tx == null || Math.hypot(sub.tx - sub.x, sub.ty - sub.y) < 0.05)) {
-      const zx = clamp(sub.x + (rnd() - 0.5) * 1.6, 0.4, D.WORLD.width - 0.4);
+      const zx = clamp(sub.x + (rnd() - 0.5) * 3, 0.4, D.WORLD.width - 0.4);
       sub.tx = zx;
-      sub.ty = clamp(sub.y + (rnd() - 0.45) * 0.6, 0.08, D.seabedAt(zx) - 0.15);
+      sub.ty = clamp(sub.y + (rnd() - 0.45) * 1, 0.08, D.seabedAt(zx) - 0.12);
+    }
+    // Så lenge fingeren holdes på skjermen, styrer ubåten mot det stedet fingeren peker på nå –
+    // også når kameraet flytter seg og fingeren står stille. Da stopper den ikke opp underveis.
+    const steering = pointer && !pinch && (pointer.moved || (!pointer.hit && !pointer.place));
+    if (steering) {
+      const p = toWorld({ clientX: pointer.cx, clientY: pointer.cy });
+      sub.tx = p.x;
+      sub.ty = p.y;
     }
     if (sub.tx != null) {
       const dx = sub.tx - sub.x;
@@ -209,7 +286,7 @@
       if (dist < 0.01 && !pointer) {
         sub.tx = null;
       } else {
-        const want = Math.min(maxSpeed, dist * 2.2);
+        const want = Math.min(maxSpeed, dist * (steering ? 3.5 : 2.2));
         sub.vx += ((dx / (dist || 1)) * want - sub.vx) * Math.min(1, dt * 3);
         sub.vy += ((dy / (dist || 1)) * want - sub.vy) * Math.min(1, dt * 3);
       }
@@ -220,28 +297,28 @@
     }
     sub.x += sub.vx * dt;
     sub.y += sub.vy * dt;
-    sub.x = clamp(sub.x, 0.15, D.WORLD.width - 0.15);
-    sub.y = clamp(sub.y, 0.04, D.seabedAt(sub.x) - 0.07);
+    sub.x = clamp(sub.x, 0.1, D.WORLD.width - 0.1);
+    sub.y = clamp(sub.y, 0.025, D.seabedAt(sub.x) - 0.04);
     if (Math.abs(sub.vx) > 0.02) sub.dir = sub.vx > 0 ? 1 : -1;
     // Bobler fra propellen.
     const speed = Math.hypot(sub.vx, sub.vy);
     if (speed > 0.05 && time - lastBubble > 0.12 / Math.min(3, speed * 6)) {
       lastBubble = time;
-      bubbles.push({ x: sub.x - sub.dir * 0.07, y: sub.y + 0.005, r: 0.004 + rnd() * 0.006, vy: -0.05 - rnd() * 0.05, life: 3 });
+      bubbles.push({ x: sub.x - sub.dir * SUB_LEN * 0.55, y: sub.y + 0.003, r: 0.003 + rnd() * 0.004, vy: -0.05 - rnd() * 0.05, life: 3 });
       if (rnd() < 0.35) AU.bubble(0.6);
       // Lysende plankton glitrer der ubåten kjører i det mørke dypet.
-      if (D.depthAt(sub.y) > 250 && rnd() < 0.6) sparks.push({ x: sub.x - sub.dir * 0.06 + (rnd() - 0.5) * 0.08, y: sub.y + (rnd() - 0.5) * 0.08, life: 1.2 + rnd() });
+      if (D.depthAt(sub.y) > 250 && rnd() < 0.6) sparks.push({ x: sub.x - sub.dir * 0.05 + (rnd() - 0.5) * 0.08, y: sub.y + (rnd() - 0.5) * 0.08, life: 1.2 + rnd() });
     }
   }
 
   function updateCamera(dt) {
     const vw = W / S;
     const tx = sub.x - vw / 2 + sub.vx * 0.6;
-    const ty = sub.y - 0.45 + sub.vy * 0.4;
+    const ty = sub.y - (H / S) * 0.45 + sub.vy * 0.4;
     cam.x += (tx - cam.x) * Math.min(1, dt * 2.5);
     cam.y += (ty - cam.y) * Math.min(1, dt * 2.5);
     cam.x = clamp(cam.x, 0, Math.max(0, D.WORLD.width - vw));
-    cam.y = clamp(cam.y, -D.WORLD.sky, D.WORLD.height + 0.05 - 1);
+    cam.y = clamp(cam.y, -D.WORLD.sky, D.WORLD.height + 0.05 - H / S);
   }
 
   // ---------- Tegning ----------
@@ -318,6 +395,39 @@
     const d = D.depthAt(cam.y + 0.5);
     ctx.fillStyle = rgb(mix(waterColor(d), [0, 0, 0], 0.18), 0.55);
     ctx.fill();
+    ctx.strokeStyle = 'rgba(43,34,25,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  /** Dyr langt borte: små, blasse silhuetter som beveger seg saktere enn alt foran (parallakse). */
+  function drawFarLife(dt) {
+    const par = 0.55;
+    // Fast farge: silhuettene tegnes én gang per dyr og størrelse (ellers fylles bildelageret
+    // opp mens man dykker, og må tegnes på nytt – det ga små hakk).
+    const color = '#06202e';
+    for (const f of farLife) {
+      f.x += f.dir * f.speed * dt;
+      if (f.x < 0 || f.x > D.WORLD.width) f.dir *= -1;
+      // Tegnes som om de var lenger unna: forskjøvet mot midten av skjermen.
+      const px = (f.x - cam.x * par - (W / S) * (1 - par) * 0.5) * S;
+      const py = (f.y - cam.y * par - (H / S) * (1 - par) * 0.4) * S;
+      const L = f.size * S;
+      if (px < -L * 3 || px > W + L * 3 || py < -L * 2 || py > H + L * 2) continue;
+      const img = A.silhouette(f.kind, Math.max(8, Math.round(L / 8) * 8), color);
+      ctx.globalAlpha = 0.32;
+      const n = f.school || 1;
+      for (let i = 0; i < n; i++) {
+        const ox = n > 1 ? Math.sin(i * 2.4 + f.ph) * L * 2.2 : 0;
+        const oy = n > 1 ? Math.cos(i * 1.7 + f.ph + time * 0.4) * L * 0.9 : Math.sin(time * 0.3 + f.ph) * L * 0.1;
+        ctx.save();
+        ctx.translate(px + ox, py + oy);
+        ctx.scale(f.dir, 1);
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
   }
 
   function drawGodRays() {
@@ -370,30 +480,34 @@
 
   function drawSeabed() {
     const path = seabedPath();
-    const yTop = sy(D.seabedAt(cam.x + W / (2 * S)) - 0.3);
-    const g = ctx.createLinearGradient(0, yTop, 0, H + S * 0.3);
     const d = D.depthAt(cam.y + 0.6);
-    const sand = mix(hex('#c9b98a'), hex('#3b3a33'), clamp(d / 300, 0, 1));
-    g.addColorStop(0, rgb(sand));
-    g.addColorStop(1, rgb(mix(sand, [10, 10, 10], 0.6)));
-    ctx.fillStyle = g;
-    ctx.fill(path);
+    const sand = mix(hex('#c9b98a'), hex('#4a463a'), clamp(d / 300, 0, 1));
+    // Havbunnen er et flatt papirlag med blekkant og papirskygge (stil 4a).
+    const PP = window.PaizonPapir;
+    if (PP) PP.paperPath(ctx, path, rgb(sand), { sx: 2, sy: 3 });
+    else {
+      ctx.fillStyle = rgb(sand);
+      ctx.fill(path);
+    }
     // Steiner.
     for (const r of rocks) {
       const x = sx(r.x);
       if (x < -S * 0.2 || x > W + S * 0.2) continue;
       const y = sy(D.seabedAt(r.x));
       const R = r.r * S;
-      const tone = mix(hex('#6d6a62'), hex('#3a3934'), r.tone);
-      ctx.fillStyle = (() => {
-        const rg = ctx.createRadialGradient(x - R * 0.3, y - R * 0.5, R * 0.1, x, y, R * 1.1);
-        rg.addColorStop(0, rgb(mix(tone, [255, 255, 255], 0.25)));
-        rg.addColorStop(1, rgb(mix(tone, [0, 0, 0], 0.4)));
-        return rg;
-      })();
-      ctx.beginPath();
-      ctx.ellipse(x, y, R, R * r.flat, 0, Math.PI, Math.PI * 2);
-      ctx.fill();
+      const tone = mix(hex('#7d796f'), hex('#4a4842'), r.tone);
+      const st = new Path2D();
+      st.ellipse(x, y, R, R * r.flat, 0, Math.PI, Math.PI * 2);
+      st.closePath();
+      if (PP) PP.paperPath(ctx, st, rgb(tone), { sx: 1.5, sy: 2, lw: 1.3 });
+    }
+    // Skjell, småstein og tangtuer.
+    for (const det of details) {
+      const x = sx(det.x);
+      if (x < -20 || x > W + 20) continue;
+      const y = sy(D.seabedAt(det.x)) + 1;
+      if (det.kind === 'weed') A.weed(ctx, x, y, det.s * S, time, det.phase, det.color);
+      else A.pebble(ctx, x, y, Math.max(1.2, det.s * S), det.tone, det.kind);
     }
     // Lysmønster (kaustikk) på grunn bunn.
     if (d < 60) {
@@ -403,9 +517,9 @@
         ctx.save();
         ctx.clip(path);
         ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = 0.35 * D.lightAt(d);
+        ctx.globalAlpha = 0.11 * D.lightAt(d);
         for (const [sp, ox] of [[0.05, 0], [-0.04, 60]]) {
-          pat.setTransform(new DOMMatrix().translate(-cam.x * S + time * S * sp + ox, -cam.y * S + time * S * sp * 0.6).scale(S / 260));
+          pat.setTransform(new DOMMatrix().translate(-cam.x * S + time * S * sp + ox, -cam.y * S + time * S * sp * 0.6).scale(S / 520));
           ctx.fillStyle = pat;
           ctx.fillRect(0, 0, W, H);
         }
@@ -418,8 +532,7 @@
     for (const k of kelpList) {
       const x = sx(k.x);
       if (x < -S * 0.3 || x > W + S * 0.3) continue;
-      const color = rgb(mix(hex('#6f6a24'), hex('#4b5a22'), k.shade));
-      A.kelp(ctx, x, sy(D.seabedAt(k.x)) + 2, k.h * S, time, k.phase, color);
+      A.kelp(ctx, x, sy(D.seabedAt(k.x)) + 2, k.h * S, time, k.phase, k.color, k.kind);
     }
   }
 
@@ -435,19 +548,36 @@
     const art = glowOnly ? A.GLOWS[k] : A.SPECIES_ART[k];
     if (!art) return;
     const L = a.size * S;
+    const turns = !isJelly(k) && k !== 'coral' && k !== 'wreck' && k !== 'bottle';
+    const face = a.face == null ? a.dir : a.face;
     const draw = (x, y, scale, ph) => {
       ctx.save();
       ctx.translate(x, y);
-      if (!isJelly(k) && k !== 'coral' && k !== 'wreck' && k !== 'bottle') ctx.scale(a.dir, 1);
-      if (a.sp.place.type === 'bottom' && k !== 'coral' && k !== 'wreck') ctx.translate(0, -L * (k === 'crab' ? 0.2 : k === 'urchin' ? 0 : 0.08));
-      art(ctx, L * scale, time + ph);
+      if (turns) {
+        // Snur gradvis: smal midt i svingen, som når en fisk vender seg mot oss.
+        const f = Math.sign(face || 1) * Math.max(0.12, Math.abs(face));
+        if (a.sp.place.type === 'water') ctx.rotate(a.pitch * Math.sign(f));
+        ctx.scale(f, 1);
+      }
+      // De gamle tegningene hadde midten i origo og måtte løftes; papirdyrene står med føttene i origo.
+      if (!A.PAPIR && a.sp.place.type === 'bottom' && k !== 'coral' && k !== 'wreck') ctx.translate(0, -L * (k === 'crab' ? 0.2 : k === 'urchin' ? 0 : 0.08));
+      art(ctx, L * scale, a.swim + ph);
       ctx.restore();
     };
     const x = sx(a.x);
     const y = sy(a.y);
+    if (!glowOnly && a.sp.place.type === 'bottom' && k !== 'wreck' && k !== 'coral') {
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.beginPath();
+      ctx.ellipse(x, y + 1, L * 0.45, L * 0.08, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
     if (a.members) {
+      // Stimen speiles når den snur, så fiskene bytter plass i en myk bue.
       for (const m of a.members) {
-        draw(x + (m.ox + Math.sin(time * 0.8 + m.ph) * a.size * 0.4) * S, y + (m.oy + Math.cos(time * 0.6 + m.ph) * a.size * 0.3) * S, m.s, m.ph);
+        const ox = m.ox * face + Math.sin(time * 0.8 + m.ph) * a.size * 0.4;
+        const oy = m.oy + Math.cos(time * 0.6 + m.ph) * a.size * 0.3 + (1 - Math.abs(face)) * m.ox * 0.15;
+        draw(x + ox * S, y + oy * S, m.s, m.ph);
       }
     } else {
       draw(x, y, 1, a.phase);
@@ -472,14 +602,198 @@
   function drawWorldObjects() {
     const order = (a) => (a.sp.kind === 'wreck' ? 0 : a.sp.kind === 'coral' ? 1 : a.sp.place.type === 'bottom' ? 2 : 3 + (1 - Math.min(1, a.size)));
     const vis = animals.filter((a) => visible(a)).sort((p, q) => order(p) - order(q));
-    for (const a of vis) if (a.sp.place.type !== 'sky') drawAnimal(a, false);
+    // Tegn dyrene i et eget lag, gi dem volum, og legg laget over havet.
+    const main = ctx;
+    if (fx.width !== canvas.width || fx.height !== canvas.height) {
+      fx.width = edge.width = canvas.width;
+      fx.height = edge.height = canvas.height;
+    }
+    fxc.setTransform(1, 0, 0, 1, 0, 0);
+    fxc.globalCompositeOperation = 'source-over';
+    fxc.clearRect(0, 0, fx.width, fx.height);
+    fxc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx = fxc;
+    try {
+      for (const a of vis) if (a.sp.place.type !== 'sky') drawAnimal(a, false);
+    } finally {
+      ctx = main;
+    }
+    if (quality.shade) shadeCreatures();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(fx, 0, 0);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     return vis;
   }
 
-  function drawSub() {
-    const L = 0.13 * S;
+  /**
+   * Gir dyrene et «3D»-preg: en lys kant på ryggen der lyset ovenfra treffer, og en mørk
+   * kant under. Kantene finnes ved å trekke laget fra en forskjøvet kopi av seg selv.
+   */
+  function shadeCreatures() {
+    if (A.PAPIR) return; // papirdyrene har allerede kontur og skygge
+    const depth = D.depthAt(cam.y + (H / S) * 0.5);
+    const light = D.lightAt(depth);
+    const k = Math.max(2, Math.round(2.2 * dpr));
+    const pass = (dy, color) => {
+      ec.setTransform(1, 0, 0, 1, 0, 0);
+      ec.globalCompositeOperation = 'source-over';
+      ec.clearRect(0, 0, edge.width, edge.height);
+      ec.drawImage(fx, 0, 0);
+      ec.globalCompositeOperation = 'destination-out';
+      ec.drawImage(fx, 0, dy);
+      ec.globalCompositeOperation = 'source-in';
+      ec.fillStyle = color;
+      ec.fillRect(0, 0, edge.width, edge.height);
+      fxc.setTransform(1, 0, 0, 1, 0, 0);
+      fxc.globalCompositeOperation = 'source-atop';
+      fxc.drawImage(edge, 0, 0);
+      fxc.globalCompositeOperation = 'source-over';
+    };
+    pass(k, `rgba(235,250,255,${0.18 + 0.4 * light})`);
+    pass(-k * 1.5, `rgba(0,8,16,${0.28 + 0.12 * (1 - light)})`);
+  }
+
+  // ---------- Steder (grotter og vrak) ----------
+  function placeAnchor(pl) {
+    return { x: pl.x, y: D.seabedAt(pl.x) + 0.02 };
+  }
+
+  function drawPlaces() {
+    for (const pl of D.PLACES) {
+      if (pl.kind === 'ship') continue; // skipsvraket tegnes som et dyr/ting (wreck)
+      const a = placeAnchor(pl);
+      const L = pl.size * S;
+      const x = sx(a.x);
+      const y = sy(a.y);
+      if (x < -L || x > W + L || y < -L || y > H + L) continue;
+      ctx.save();
+      // Litt nedsunket, så sanden foran dekker foten (den står ikke og svever på skråningen).
+      ctx.translate(x, y + L * 0.1);
+      if (pl.kind === 'cave') A.caveMouth(ctx, L, time, pl.palette);
+      else A.boatWreck(ctx, L);
+      ctx.restore();
+      drawPlaceHint(pl, x, y - L * (pl.kind === 'cave' ? 0.18 : 0.25), L);
+    }
+    const wreck = D.PLACES.find((pl) => pl.kind === 'ship');
+    const wa = animals.find((a) => a.sp.enter === wreck.key);
+    if (wa) drawPlaceHint(wreck, sx(wa.x), sy(wa.y) - wa.size * S * 0.18, wa.size * S);
+  }
+
+  /** Et rolig, pulserende lys og bobler som viser at man kan svømme inn. */
+  function drawPlaceHint(pl, x, y, L) {
+    const near = Math.hypot(sub.x - pl.x, sub.y - D.seabedAt(pl.x)) < 1.4;
+    const pulse = 0.5 + 0.5 * Math.sin(time * 2 + pl.x);
     ctx.save();
-    ctx.translate(sx(sub.x), sy(sub.y) + Math.sin(time * 1.5) * S * 0.004);
+    ctx.globalCompositeOperation = 'lighter';
+    const r = L * 0.18 * (1 + pulse * 0.15);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    const a = (near ? 0.35 : 0.15) * (0.6 + 0.4 * pulse) * (visited.has(pl.key) ? 0.5 : 1);
+    g.addColorStop(0, `rgba(255,240,190,${a})`);
+    g.addColorStop(1, 'rgba(255,240,190,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    if (near && mode !== 'rolig') {
+      ctx.font = `${Math.round(Math.max(18, L * 0.12))}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = 0.6 + 0.4 * pulse;
+      ctx.fillText('🔦', x, y - L * 0.1);
+      ctx.globalAlpha = 1;
+    }
+    if (rnd() < 0.03) bubbles.push({ x: pl.x + (rnd() - 0.5) * 0.05, y: cam.y + y / S, r: 0.002 + rnd() * 0.003, vy: -0.04, life: 2.5 });
+  }
+
+  function placeAt(p) {
+    for (const pl of D.PLACES) {
+      if (pl.kind === 'ship') continue;
+      const a = placeAnchor(pl);
+      const cy = a.y - pl.size * 0.25;
+      if (Math.abs(p.x - a.x) < pl.size * 0.45 && Math.abs(p.y - cy) < pl.size * 0.3) return pl;
+    }
+    return null;
+  }
+
+  function enterPlace(pl) {
+    if (inside) return;
+    inside = pl;
+    const first = !visited.has(pl.key);
+    visited.add(pl.key);
+    sub.tx = null;
+    sub.vx = sub.vy = 0;
+    pointers.clear();
+    pointer = null;
+    pinch = null;
+    Sound.flip();
+    closeCard();
+    closeMap();
+    IN.open(pl, {
+      mode,
+      found: [],
+      chime: (pan) => AU.chime(pan),
+      onFind: (it, firstTap) => {
+        let res = { name: it.name, text: it.text };
+        let snd = null;
+        if (it.species) {
+          const sp = D.SPECIES.find((x) => x.key === it.species);
+          found.add(sp.key);
+          const isNew = !album.has(sp.key);
+          if (isNew) {
+            album.add(sp.key);
+            P.store.set('ocean.album', [...album]);
+          }
+          res = { name: sp.name, text: sp.facts, isNew: isNew && mode !== 'rolig' };
+          snd = sp.sound ? sp : null;
+          if (mode === 'rolig' && snd) AU.animal(snd.sound, { distance: 0.3, wet: 0.7, volume: 0.7 });
+        }
+        if (mode === 'lar') {
+          Speech.speak(`${res.name}. ${res.text}`).then(() => { if (snd && inside) playSound(snd, 0); });
+        } else if (mode === 'oppdag') {
+          if (res.isNew) Speech.speak(`Ny i fotoboka: ${res.name}!`);
+          else Sound.flip();
+        }
+        return res;
+      },
+      onAllFound: (place) => {
+        Sound.win();
+        if (mode === 'lar') setTimeout(() => inside && Speech.speak(`Du har funnet alt i ${place.name}!`), 2500);
+      },
+    });
+    if (mode !== 'rolig') {
+      IN.message(pl.name, pl.intro);
+      if (mode === 'lar') Speech.speak(pl.intro);
+      else if (first) Sound.hint();
+    }
+  }
+
+  function exitPlace() {
+    if (!inside) return;
+    const pl = inside;
+    inside = null;
+    IN.close();
+    Speech.stop();
+    if (playing) playing.stop();
+    Sound.tap();
+    // Ubåten dukker opp rett utenfor inngangen.
+    sub.x = clamp(pl.x + 0.15, 0.2, D.WORLD.width - 0.2);
+    sub.y = Math.max(0.05, D.seabedAt(sub.x) - pl.size * 0.6);
+    sub.tx = null;
+    sub.vx = sub.vy = 0;
+    last = 0;
+  }
+  $('#ocean-inside-exit').addEventListener('click', exitPlace);
+  $('#ocean-inside-read').addEventListener('click', () => {
+    const n = $('#ocean-inside-info-name').textContent;
+    const t = $('#ocean-inside-info-text').textContent;
+    Speech.speak(`${n}. ${t}`);
+  });
+  $('#ocean-inside-info-close').addEventListener('click', () => { Sound.tap(); IN.hideInfo(); });
+
+  function drawSub() {
+    const L = SUB_LEN * S;
+    ctx.save();
+    ctx.translate(sx(sub.x), sy(sub.y) + Math.sin(time * 1.5) * S * 0.002);
     ctx.scale(sub.dir, 1);
     ctx.rotate(clamp(sub.vy * 0.8, -0.25, 0.25) * sub.dir);
     A.submarine(ctx, L, time, D.depthAt(sub.y) > 120);
@@ -491,6 +805,55 @@
       ctx.arc(sx(b.x), sy(b.y), b.r * S, 0, Math.PI * 2);
       ctx.stroke();
     }
+  }
+
+  /** Uskarpe partikler helt foran kameraet. */
+  function drawBokeh() {
+    const d = D.depthAt(cam.y + (H / S) * 0.5);
+    const deep = d > 250;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const b of bokeh) {
+      const x = ((b.x * W * 1.6 - cam.x * S * 1.4) % (W * 1.6) + W * 1.6) % (W * 1.6) - W * 0.3;
+      const y = ((b.y * H * 1.6 - cam.y * S * 1.4 + Math.sin(time * 0.2 + b.ph) * 20) % (H * 1.6) + H * 1.6) % (H * 1.6) - H * 0.3;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, b.r);
+      const c = deep ? '120,200,255' : '230,250,240';
+      g.addColorStop(0, `rgba(${c},${b.a * (deep ? 0.6 : 1)})`);
+      g.addColorStop(0.7, `rgba(${c},${b.a * 0.4})`);
+      g.addColorStop(1, `rgba(${c},0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, b.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** Vannflata sett nedenfra: et glitrende speil med lys som bølger. */
+  function drawSurfaceUnderside() {
+    const y = sy(0);
+    if (y < -20 || y > H) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createLinearGradient(0, y, 0, y + S * 0.12);
+    g.addColorStop(0, 'rgba(200,250,250,0.35)');
+    g.addColorStop(1, 'rgba(200,250,250,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y, W, S * 0.12);
+    ctx.strokeStyle = 'rgba(230,255,255,0.35)';
+    ctx.lineWidth = 1.2;
+    for (let k = 0; k < 3; k++) {
+      ctx.beginPath();
+      for (let px = 0; px <= W; px += 8) {
+        const wx = cam.x + px / S;
+        const yy = y + S * (0.012 + k * 0.014) + Math.sin(wx * (22 + k * 9) + time * (1.4 + k * 0.5)) * S * 0.004 * (k + 1);
+        if (px) ctx.lineTo(px, yy);
+        else ctx.moveTo(px, yy);
+      }
+      ctx.globalAlpha = 0.6 - k * 0.18;
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   function drawSurface() {
@@ -539,7 +902,7 @@
     const subDepth = D.depthAt(sub.y);
     if (subDepth > 120) {
       dctx.globalCompositeOperation = 'destination-out';
-      const lx = sx(sub.x + sub.dir * 0.06) / 2;
+      const lx = sx(sub.x + sub.dir * SUB_LEN * 0.5) / 2;
       const ly = sy(sub.y) / 2;
       const reach = S * 0.75 / 2;
       const ang = sub.dir > 0 ? 0 : Math.PI;
@@ -567,7 +930,7 @@
     if (subDepth > 120) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      const lx = sx(sub.x + sub.dir * 0.06);
+      const lx = sx(sub.x + sub.dir * SUB_LEN * 0.5);
       const ly = sy(sub.y);
       const reach = S * 0.75;
       const ang = sub.dir > 0 ? 0 : Math.PI;
@@ -606,15 +969,21 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawBackground();
     drawFarRidge();
+    drawFarLife(dt);
     drawGodRays();
+    drawSurfaceUnderside();
     drawKelp();
+    drawPlaces();
     drawSeabed();
     const vis = drawWorldObjects();
     drawSub();
     drawSnow(dt);
     drawSurface();
+    // Svak papirfiber over hele bildet, så også vannet ser ut som papir.
+    if (window.PaizonPapir) window.PaizonPapir.grainOverlay(ctx, W, H, 0.3);
     drawDarkness();
     drawGlows(vis);
+    drawBokeh();
     if (sleeping) {
       ctx.fillStyle = `rgba(0,0,0,${clamp((time - sleepStartedAt) / 40, 0, 0.92)})`;
       ctx.fillRect(0, 0, W, H);
@@ -627,8 +996,17 @@
   function loop(now) {
     if (!running) return;
     const dt = Math.min(0.05, last ? (now - last) / 1000 : 0.016);
+    if (last && !inside && !document.hidden) adaptQuality(now - last);
     last = now;
     time += dt;
+    if (inside) {
+      // Inne i en grotte eller et vrak: verden står stille, men lyden får mer «rom».
+      AU.update(D.depthAt(D.seabedAt(inside.x)), 1);
+      checkMission(D.depthAt(sub.y));
+      checkSleep();
+      raf = requestAnimationFrame(loop);
+      return;
+    }
     updateSub(dt);
     updateAnimals(dt);
     for (const b of bubbles) { b.y += b.vy * dt; b.x += Math.sin(time * 3 + b.r * 900) * 0.01 * dt; b.life -= dt; }
@@ -644,7 +1022,22 @@
     checkSleep();
     updateHud(depth);
     render(dt);
+    drawMini();
     raf = requestAnimationFrame(loop);
+  }
+
+  function adaptQuality(ms) {
+    quality.ema += (Math.min(100, ms) - quality.ema) * 0.05;
+    quality.slow = quality.ema > 24 ? quality.slow + 1 : 0;
+    if (quality.slow < 120) return; // omtrent to sekunder med tregt bilde
+    quality.slow = 0;
+    quality.ema = 16;
+    if (quality.maxDpr > 1 && dpr > 1) {
+      quality.maxDpr = Math.max(1, Math.min(quality.maxDpr, dpr) - 0.5);
+      measure();
+    } else if (quality.shade) {
+      quality.shade = false;
+    }
   }
 
   /** Etterklang: mer «rom» ved vraket, revet og nær bunnen i dypet. */
@@ -655,6 +1048,7 @@
       const d = Math.hypot(a.x - x, a.y - y);
       room = Math.max(room, clamp(1 - d / 0.8, 0, 1));
     }
+    for (const pl of D.PLACES) room = Math.max(room, clamp(1 - Math.hypot(pl.x - x, D.seabedAt(pl.x) - y) / 1.2, 0, 1) * 0.6);
     const depth = D.depthAt(y);
     return clamp(room + (depth > 500 ? 0.3 : depth / 1700), 0, 1);
   }
@@ -711,7 +1105,7 @@
     if (mode !== 'lar' || missionDone) return;
     const m = D.MISSIONS[missionIndex];
     if (!m) return;
-    const ok = m.depth ? depth >= m.depth : m.species.some((k) => found.has(k));
+    const ok = m.depth ? depth >= m.depth : m.places ? m.places.some((k) => visited.has(k)) : m.species.some((k) => found.has(k));
     if (!ok) return;
     missionDone = true;
     Sound.win();
@@ -740,6 +1134,7 @@
     return { x: cam.x + (e.clientX - r.left) / S, y: cam.y + (e.clientY - r.top) / S, px: e.clientX, py: e.clientY };
   }
 
+  let lastHitDist = 1;
   function animalAt(p) {
     let best = null;
     let bestD = Infinity;
@@ -756,6 +1151,7 @@
         bestD = d;
       }
     }
+    lastHitDist = bestD;
     return best;
   }
 
@@ -765,18 +1161,41 @@
     AU.start();
     lastInput = time;
     if (sleeping) return;
-    const p = toWorld(e);
-    pointer = { id: e.pointerId, x0: p.px, y0: p.py, moved: false, hit: animalAt(p) };
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignorer */ }
-    if (!pointer.hit) {
+    if (pointers.size === 2) {
+      // To fingre: knip for å zoome inn og ut.
+      const [a, b] = [...pointers.values()];
+      pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y), view0: view };
+      pointer = null;
+      sub.tx = null;
+      return;
+    }
+    if (pointers.size > 2 || pinch) return;
+    const p = toWorld(e);
+    let hit = animalAt(p);
+    const place = placeAt(p);
+    // En fisk som tilfeldigvis svømmer forbi inngangen, skal ikke ta trykket fra grotta.
+    if (hit && place && lastHitDist > 0.45) hit = null;
+    pointer = { id: e.pointerId, x0: p.px, y0: p.py, cx: e.clientX, cy: e.clientY, moved: false, hit, place: hit ? null : place };
+    if (!pointer.hit && !pointer.place) {
       sub.tx = p.x;
       sub.ty = p.y;
     }
   });
   canvas.addEventListener('pointermove', (e) => {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && pointers.size >= 2) {
+      const [a, b] = [...pointers.values()];
+      const d = Math.max(20, Math.hypot(a.x - b.x, a.y - b.y));
+      setView(pinch.view0 * (pinch.d0 / d));
+      return;
+    }
     if (!pointer || e.pointerId !== pointer.id) return;
     lastInput = time;
     const p = toWorld(e);
+    pointer.cx = e.clientX;
+    pointer.cy = e.clientY;
     if (Math.hypot(p.px - pointer.x0, p.py - pointer.y0) > 10) pointer.moved = true;
     if (pointer.moved) {
       sub.tx = p.x;
@@ -784,15 +1203,44 @@
     }
   });
   const release = (e) => {
+    pointers.delete(e.pointerId);
+    if (pinch) {
+      if (pointers.size === 0) pinch = null;
+      return;
+    }
     if (!pointer || e.pointerId !== pointer.id) return;
     if (!pointer.moved && pointer.hit) tapAnimal(pointer.hit);
+    else if (!pointer.moved && pointer.place) enterPlace(pointer.place);
     pointer = null;
   };
   canvas.addEventListener('pointerup', release);
-  canvas.addEventListener('pointercancel', () => { pointer = null; });
+  canvas.addEventListener('pointercancel', (e) => {
+    pointers.delete(e.pointerId);
+    if (pointers.size === 0) pinch = null;
+    pointer = null;
+  });
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    setView(view * Math.exp(e.deltaY * 0.0015));
+  }, { passive: false });
+
+  function setView(v) {
+    view = clamp(v, VIEW_MIN, VIEW_MAX);
+    S = H / view;
+  }
 
   function tapAnimal(a) {
     const sp = a.sp;
+    if (sp.enter) {
+      // Skipsvraket: svøm inn i det.
+      found.add(sp.key);
+      if (!album.has(sp.key)) {
+        album.add(sp.key);
+        P.store.set('ocean.album', [...album]);
+      }
+      enterPlace(D.PLACES.find((pl) => pl.key === sp.enter));
+      return;
+    }
     a.glowUntil = time + 1.5;
     const first = !found.has(sp.key);
     found.add(sp.key);
@@ -853,7 +1301,7 @@
   function drawCardArt(sp) {
     const c = $('#ocean-card-art');
     const cx = c.getContext('2d');
-    const r = c.getBoundingClientRect();
+    const r = { width: c.offsetWidth || c.getBoundingClientRect().width, height: c.offsetHeight || c.getBoundingClientRect().height };
     const scale = Math.min(2, window.devicePixelRatio || 1);
     c.width = Math.max(10, r.width * scale);
     c.height = Math.max(10, r.height * scale);
@@ -872,17 +1320,12 @@
       bg.addColorStop(1, rgb(mix(zc, [0, 0, 0], 0.35)));
       cx.fillStyle = bg;
       cx.fillRect(0, 0, w, h);
-      cx.save();
-      const jelly = isJelly(sp.kind);
-      const big = sp.kind === 'lionsmane';
-      const L = jelly ? h * (big ? 0.28 : 0.45) : sp.kind === 'coral' || sp.kind === 'wreck' ? w * 0.75 : sp.kind === 'crab' || sp.kind === 'starfish' || sp.kind === 'urchin' ? Math.min(w, h) * 0.6 : w * 0.72;
-      cx.translate(w / 2, jelly ? h * (big ? 0.2 : 0.45) : sp.kind === 'coral' || sp.kind === 'wreck' ? h * 0.92 : h * 0.55);
-      art(cx, L, t);
-      if (glow) {
-        cx.globalCompositeOperation = 'lighter';
-        glow(cx, L, t);
-      }
-      cx.restore();
+      // Dyret skaleres så det alltid passer i rammen.
+      window.PaizonExplore.drawFitted(cx, w, h, `ocean-${sp.kind}`, (c2, L2) => art(c2, L2, t), 0.8, glow ? (c2, L2) => {
+        c2.globalCompositeOperation = 'lighter';
+        glow(c2, L2, t);
+        c2.globalCompositeOperation = 'source-over';
+      } : null);
       cardRaf = requestAnimationFrame(step);
     };
     step();
@@ -925,12 +1368,7 @@
     const cx = c.getContext('2d');
     const w = c.width;
     const h = c.height;
-    const jelly = isJelly(sp.kind);
-    const L = jelly ? h * (sp.kind === 'lionsmane' ? 0.25 : 0.42) : sp.kind === 'coral' || sp.kind === 'wreck' ? w * 0.8 : w * 0.62;
-    cx.save();
-    cx.translate(w / 2, jelly ? h * (sp.kind === 'lionsmane' ? 0.22 : 0.5) : sp.kind === 'coral' || sp.kind === 'wreck' ? h * 0.92 : h * 0.55);
-    A.SPECIES_ART[sp.kind](cx, L, 1);
-    cx.restore();
+    window.PaizonExplore.drawFitted(cx, w, h, `ocean-${sp.kind}`, (c2, L2) => A.SPECIES_ART[sp.kind](c2, L2, 1), 0.86);
     if (!have) {
       // Ikke funnet ennå: bare silhuetten.
       cx.globalCompositeOperation = 'source-in';
@@ -946,6 +1384,162 @@
   $('#ocean-album-btn').addEventListener('click', () => { Sound.tap(); openAlbum(); });
   $('#ocean-album-close').addEventListener('click', () => { Sound.tap(); closeAlbum(); });
 
+  // ---------- Kart (oversikt) ----------
+  const ZONE_COLORS = ['#7fd0de', '#2f9aa8', '#1a6a84', '#0d3550', '#04121f'];
+  let mapStatic = null;
+  let mapTarget = null;
+
+  /** Tegner hele havet i et rektangel (w x h). Brukes både av minikartet og det store kartet. */
+  function drawMapBase(c, w, h, big) {
+    const wy = (y) => ((y + 0.4) / (D.WORLD.height + 0.4)) * h;
+    const wx = (x) => (x / D.WORLD.width) * w;
+    c.fillStyle = '#bfe3f2';
+    c.fillRect(0, 0, w, wy(0));
+    D.ZONES.forEach((z, i) => {
+      const y0 = wy(D.yAtDepth(z.from));
+      const y1 = wy(D.yAtDepth(Math.min(3000, z.to)));
+      c.fillStyle = ZONE_COLORS[i];
+      c.fillRect(0, y0, w, (i === D.ZONES.length - 1 ? h : y1) - y0);
+      const fs = Math.round(h * 0.035);
+      const bottom = i === D.ZONES.length - 1 ? h : y1;
+      if (big && bottom - y0 > fs * 1.3) {
+        c.fillStyle = i < 2 ? 'rgba(5,30,45,0.75)' : 'rgba(230,245,250,0.8)';
+        c.font = `800 ${fs}px system-ui, sans-serif`;
+        c.textAlign = 'right';
+        c.fillText(z.name, w - 10, Math.min(h - 8, y0 + fs * 1.15));
+      }
+    });
+    c.beginPath();
+    c.moveTo(0, h);
+    for (let x = 0; x <= D.WORLD.width; x += 0.1) c.lineTo(wx(x), wy(D.seabedAt(x)));
+    c.lineTo(w, h);
+    c.closePath();
+    c.fillStyle = '#8a7c5c';
+    c.fill();
+    c.strokeStyle = '#c9b98a';
+    c.lineWidth = big ? 3 : 1.5;
+    c.stroke();
+  }
+
+  function mapCoords(w, h) {
+    return {
+      x: (x) => (x / D.WORLD.width) * w,
+      y: (y) => ((y + 0.4) / (D.WORLD.height + 0.4)) * h,
+      toWorld: (px, py) => ({ x: (px / w) * D.WORLD.width, y: (py / h) * (D.WORLD.height + 0.4) - 0.4 }),
+    };
+  }
+
+  function drawMapMarkers(c, w, h, big) {
+    const m = mapCoords(w, h);
+    D.PLACES.forEach((pl, i) => {
+      const x = m.x(pl.x);
+      const y = m.y(D.seabedAt(pl.x)) - (big ? 12 : 4);
+      if (big) {
+        c.font = `${Math.round(h * 0.05)}px system-ui, sans-serif`;
+        c.textAlign = 'center';
+        c.fillText(pl.kind === 'cave' ? '🕳️' : '⚓', x, y);
+        c.font = `800 ${Math.round(h * 0.028)}px system-ui, sans-serif`;
+        c.fillStyle = '#fff';
+        c.shadowColor = 'rgba(0,0,0,0.6)';
+        c.shadowBlur = 4;
+        // Annenhver merkelapp under, så navn som ligger tett ikke går i hverandre.
+        c.fillText(pl.name + (visited.has(pl.key) ? ' ✓' : ''), x, i % 2 ? y + h * 0.06 : y - h * 0.055);
+        c.shadowBlur = 0;
+      } else {
+        c.fillStyle = visited.has(pl.key) ? '#9be39b' : '#ffe08a';
+        c.beginPath();
+        c.arc(x, y, 2.5 * dpr, 0, Math.PI * 2);
+        c.fill();
+      }
+    });
+    if (mapTarget) {
+      c.strokeStyle = '#ffe066';
+      c.lineWidth = big ? 3 : 1.5 * dpr;
+      c.beginPath();
+      c.arc(m.x(mapTarget.x), m.y(mapTarget.y), big ? 12 : 4 * dpr, 0, Math.PI * 2);
+      c.stroke();
+    }
+    // Det kameraet ser nå.
+    if (!big) {
+      c.strokeStyle = 'rgba(255,255,255,0.8)';
+      c.lineWidth = 1 * dpr;
+      c.strokeRect(m.x(cam.x), m.y(cam.y), (W / S / D.WORLD.width) * w, ((H / S) / (D.WORLD.height + 0.4)) * h);
+    }
+    const sxm = m.x(sub.x);
+    const sym = m.y(sub.y);
+    c.fillStyle = '#ffd21a';
+    c.strokeStyle = '#3a2a00';
+    c.lineWidth = big ? 2 : 1 * dpr;
+    c.beginPath();
+    c.ellipse(sxm, sym, big ? 11 : 4 * dpr, big ? 6 : 2.4 * dpr, 0, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+  }
+
+  function drawMini() {
+    if (mini.width < 20) return;
+    if (!mapStatic || mapStatic.width !== mini.width || mapStatic.height !== mini.height) {
+      mapStatic = document.createElement('canvas');
+      mapStatic.width = mini.width;
+      mapStatic.height = mini.height;
+      drawMapBase(mapStatic.getContext('2d'), mini.width, mini.height, false);
+    }
+    mctx.setTransform(1, 0, 0, 1, 0, 0);
+    mctx.drawImage(mapStatic, 0, 0);
+    drawMapMarkers(mctx, mini.width, mini.height, false);
+    if (mapTarget && Math.hypot(sub.x - mapTarget.x, sub.y - mapTarget.y) < 0.15) mapTarget = null;
+  }
+
+  function openMap() {
+    const box = $('#ocean-map');
+    box.hidden = false;
+    const c = $('#ocean-map-canvas');
+    const r = c.getBoundingClientRect();
+    const scale = Math.min(2, window.devicePixelRatio || 1);
+    c.width = Math.round(r.width * scale);
+    c.height = Math.round(r.height * scale);
+    const cx = c.getContext('2d');
+    cx.setTransform(scale, 0, 0, scale, 0, 0);
+    drawMapBase(cx, r.width, r.height, true);
+    drawMapMarkers(cx, r.width, r.height, true);
+    Sound.flip();
+  }
+  function closeMap() {
+    $('#ocean-map').hidden = true;
+  }
+  mini.addEventListener('click', () => { Sound.unlock(); openMap(); });
+  $('#ocean-map-close').addEventListener('click', () => { Sound.tap(); closeMap(); });
+  $('#ocean-map-canvas').addEventListener('click', (e) => {
+    // Trykk på kartet: ubåten kjører dit av seg selv.
+    const c = e.currentTarget;
+    const r = c.getBoundingClientRect();
+    const p = mapCoords(r.width, r.height).toWorld(e.clientX - r.left, e.clientY - r.top);
+    const x = clamp(p.x, 0.2, D.WORLD.width - 0.2);
+    const y = clamp(p.y, 0.05, D.seabedAt(x) - 0.08);
+    sub.tx = x;
+    sub.ty = y;
+    mapTarget = { x, y };
+    lastInput = time;
+    Sound.tap();
+    closeMap();
+  });
+
+  // ---------- Musikk ----------
+  function renderMusicBtn() {
+    const b = $('#ocean-music-btn');
+    const on = settings.music !== 0;
+    b.textContent = on ? '🎵' : '🔇';
+    b.setAttribute('aria-pressed', String(on));
+    b.title = on ? 'Musikk på' : 'Musikk av';
+  }
+  $('#ocean-music-btn').addEventListener('click', () => {
+    settings.music = settings.music !== 0 ? 0 : 1;
+    P.saveSettings('ocean');
+    AU.setMusic(settings.music !== 0);
+    renderMusicBtn();
+    Sound.tap();
+  });
+
   // ---------- Sovetimer (Rolig) ----------
   function checkSleep() {
     if (!sleepEndsAt || sleeping || Date.now() < sleepEndsAt) return;
@@ -960,26 +1554,34 @@
     const r = wrap.getBoundingClientRect();
     W = Math.max(200, r.width);
     H = Math.max(200, r.height);
-    dpr = Math.min(1.5, window.devicePixelRatio || 1);
+    dpr = Math.min(quality.maxDpr, window.devicePixelRatio || 1);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
-    S = H;
+    S = H / view;
+    const mr = mini.getBoundingClientRect();
+    mini.width = Math.round(Math.max(10, mr.width) * dpr);
+    mini.height = Math.round(Math.max(10, mr.height) * dpr);
   }
 
   function start(newMode) {
     mode = newMode || 'lar';
     P.show('ocean');
     document.body.dataset.oceanMode = mode;
+    view = 1.5;
     measure();
     found = new Set();
+    visited = new Set();
+    inside = null;
+    IN.close();
+    closeMap();
     buildWorld();
-    sub.x = 0.9;
+    sub.x = 1.1;
     sub.y = 0.1;
     sub.vx = sub.vy = 0;
     sub.tx = sub.ty = null;
     sub.dir = 1;
     cam.x = clamp(sub.x - W / S / 2, 0, D.WORLD.width - W / S);
-    cam.y = sub.y - 0.45;
+    cam.y = sub.y - view * 0.45;
     zoneKey = '';
     zoneSince = 0;
     missionIndex = 0;
@@ -993,6 +1595,8 @@
     renderMission();
     $('#ocean-album-btn').hidden = mode === 'rolig';
     AU.resetMaster();
+    AU.setMusic(settings.music !== 0);
+    renderMusicBtn();
     AU.start();
     AU.preload();
     if (mode === 'lar') setTimeout(() => running && Speech.speak('Velkommen til havet! Dra med fingeren for å kjøre ubåten. Trykk på dyrene for å bli kjent med dem.'), 600);
@@ -1006,6 +1610,9 @@
   function stop() {
     running = false;
     cancelAnimationFrame(raf);
+    inside = null;
+    IN.close();
+    closeMap();
     closeCard();
     AU.stop();
     Speech.stop();
@@ -1040,6 +1647,12 @@
     get card() { return cardOpen; },
     get zone() { return zoneKey; },
     tapAnimal,
-    teleport(x, y) { sub.x = x; sub.y = y; sub.tx = null; cam.x = clamp(x - W / S / 2, 0, D.WORLD.width - W / S); cam.y = y - 0.45; },
+    get visited() { return visited; },
+    get inside() { return inside; },
+    get view() { return view; },
+    setView,
+    enter(key) { enterPlace(D.PLACES.find((pl) => pl.key === key)); },
+    exit: exitPlace,
+    teleport(x, y) { sub.x = x; sub.y = y; sub.tx = null; cam.x = clamp(x - W / S / 2, 0, D.WORLD.width - W / S); cam.y = y - (H / S) * 0.45; },
   };
 })();

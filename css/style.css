@@ -784,11 +784,11 @@ summary { cursor: pointer; font-weight: 800; padding: 10px 0; list-style-positio
 }
 /* Sonene på måleren følger verdens skala: overflate og tareskog får mest plass. */
 .ocean-meter .band { display: block; }
-.ocean-meter .b1 { flex: 0.6; background: #6cc7d8; }
-.ocean-meter .b2 { flex: 1.3; background: #2f9aa8; }
-.ocean-meter .b3 { flex: 1.8; background: #176178; }
-.ocean-meter .b4 { flex: 2.8; background: #0b2f4a; }
-.ocean-meter .b5 { flex: 2.1; background: #02101c; }
+.ocean-meter .b1 { flex: 0.71; background: #6cc7d8; }
+.ocean-meter .b2 { flex: 2.49; background: #2f9aa8; }
+.ocean-meter .b3 { flex: 3.2; background: #176178; }
+.ocean-meter .b4 { flex: 5.6; background: #0b2f4a; }
+.ocean-meter .b5 { flex: 5.2; background: #02101c; }
 .ocean-meter .dot-sub {
   position: absolute;
   left: 50%;
@@ -902,6 +902,213 @@ body[data-ocean-mode="rolig"] .ocean-readout { opacity: 0.45; }
   .ocean-card-art { width: 100%; max-height: 140px; }
   .ocean-facts { font-size: 15px; }
 }
+
+/* Minikart nede til høyre, stort kart og visningen inne i grotter og vrak. */
+.sim-world > canvas.ocean-mini {
+  position: absolute;
+  inset: auto 10px 10px auto;
+  width: clamp(120px, 20vw, 190px);
+  height: auto;
+  aspect-ratio: 24 / 17.6;
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5), 0 6px 18px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  z-index: 1;
+}
+.ocean-map,
+.ocean-inside {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+}
+.ocean-map {
+  inset: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 22px;
+  background: rgba(245, 250, 252, 0.97);
+}
+.ocean-map[hidden],
+.ocean-inside[hidden] { display: none; }
+.ocean-map-help { margin: 0; color: var(--muted); font-weight: 700; }
+.ocean-map-canvas { flex: 1; min-height: 0; width: 100%; border-radius: 14px; cursor: crosshair; }
+.ocean-inside { background: #000; animation: dive-in 0.9s ease; }
+.sim-world .ocean-inside > canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+@keyframes dive-in {
+  from { opacity: 0; filter: blur(8px); }
+  to { opacity: 1; filter: none; }
+}
+.ocean-inside-top {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+.ocean-inside-top > * { pointer-events: auto; }
+.ocean-inside-top .btn,
+.ocean-inside-count { white-space: nowrap; }
+.ocean-inside-name { margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; font-weight: 900; font-size: clamp(18px, 3vw, 26px); text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7); }
+.ocean-inside-count { margin: 0; padding: 6px 12px; border-radius: 999px; background: rgba(5, 20, 32, 0.55); color: #eaf6fb; font-weight: 800; }
+.ocean-inside-count[hidden] { display: none; }
+.ocean-inside-info {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: min(680px, calc(100% - 24px));
+  padding: 12px 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  animation: pop 0.3s ease;
+}
+.ocean-inside-info[hidden] { display: none; }
+.ocean-inside-info.at-top { bottom: auto; top: 62px; }
+.ocean-inside-info h3 { margin: 0; font-size: 24px; font-weight: 900; }
+.ocean-inside-info p:not(.ocean-new) { margin: 4px 0 8px; font-size: 17px; line-height: 1.45; }
+body[data-ocean-mode="rolig"] .ocean-mini { opacity: 0.6; }
+@media (max-width: 600px) {
+  .ocean-inside-count { font-size: 13px; padding: 4px 8px; }
+  .ocean-inside-info p:not(.ocean-new) { font-size: 15px; }
+}
+
+/* ---------- Skogen og Himmelen ---------- */
+.forest-world { background: #2e4a2c; }
+.sky-world { background: #7fb2e0; }
+.forest-world .ocean-card,
+.sky-world .ocean-card { z-index: 3; }
+body[data-forest-mode="rolig"] #forest-listen-btn,
+body[data-sky-mode="rolig"] #sky-listen-btn { display: none; }
+.sky-meter .s1 { flex: 1; background: #6a9a4a; }
+.sky-meter .s2 { flex: 1.2; background: #8ab8d8; }
+.sky-meter .s3 { flex: 1.4; background: #a8cce8; }
+.sky-meter .s4 { flex: 1.6; background: #5a8ac8; }
+.sky-meter .s5 { flex: 1.2; background: #1a2a6a; }
+#screen-forest .game-top,
+#screen-sky .game-top { gap: 6px; }
+#screen-forest .ocean-mission,
+#screen-sky .ocean-mission { min-width: 0; }
+@media (max-width: 600px) {
+  #screen-forest .ocean-mission,
+  #screen-sky .ocean-mission { font-size: 13px; }
+  #screen-forest .game-top .icon-btn,
+  #screen-sky .game-top .icon-btn { width: 40px; height: 40px; font-size: 18px; }
+}
+
+/* ---------- Rommet (prøveversjon) ---------- */
+.proto-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #ffd84a;
+  color: #3a2c00;
+  font-size: 12px;
+  font-weight: 900;
+  vertical-align: middle;
+  letter-spacing: 0.02em;
+}
+.space-card { background: radial-gradient(circle at 80% 20%, #4a3a9a, #10142e 70%); }
+.space-world { background: #01020a; touch-action: none; }
+.sim-world > canvas.space-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.space-readout {
+  flex: 1;
+  margin: 0;
+  text-align: center;
+  font-weight: 900;
+  font-size: clamp(14px, 2.6vw, 20px);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.space-count {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  font-size: clamp(64px, 16vw, 140px);
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 4px 0 #2b2219, 0 0 30px rgba(255, 200, 120, 0.8);
+  pointer-events: none;
+  z-index: 3;
+}
+.space-count.pop { animation: space-pop 0.5s ease; }
+@keyframes space-pop { from { transform: translate(-50%, -50%) scale(1.6); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+.space-radio {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  margin: 0 auto;
+  max-width: 560px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgba(10, 14, 30, 0.72);
+  color: #e8f2ff;
+  font-weight: 700;
+  z-index: 3;
+  animation: pop 0.25s ease;
+  pointer-events: none;
+}
+.space-radio[hidden] { display: none; }
+.space-radio p { margin: 0; font-size: clamp(14px, 2.4vw, 17px); line-height: 1.4; }
+.space-action,
+.space-ff {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  border: 0;
+  border-radius: 999px;
+  font-weight: 900;
+  color: #ffffff;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.space-action {
+  bottom: max(18px, env(safe-area-inset-bottom));
+  padding: 16px 28px;
+  font-size: clamp(17px, 3.4vw, 22px);
+  background: linear-gradient(90deg, #ff7a2a calc(var(--p, 0) * 100%), #6c5ce7 calc(var(--p, 0) * 100%));
+  box-shadow: 0 6px 0 #2b2219, 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+.space-action.hold { background: linear-gradient(90deg, #ff7a2a calc(var(--p, 0) * 100%), #d8432e calc(var(--p, 0) * 100%)); }
+.space-action:active { transform: translateX(-50%) translateY(3px); box-shadow: 0 3px 0 #2b2219; }
+.space-action[hidden],
+.space-ff[hidden] { display: none; }
+.space-ff {
+  bottom: max(18px, env(safe-area-inset-bottom));
+  padding: 12px 22px;
+  font-size: 16px;
+  background: rgba(108, 92, 231, 0.85);
+  white-space: nowrap;
+}
+.space-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  margin: 0;
+  color: #e8f2ff;
+  font-weight: 900;
+  font-size: 20px;
+  z-index: 4;
+}
+.space-loading[hidden] { display: none; }
+.space-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; z-index: 2; }
+.space-grain { position: absolute; inset: 0; pointer-events: none; opacity: 0.22; z-index: 1; background-repeat: repeat; }
 
 /* ---------- Diverse ---------- */
 .toast {

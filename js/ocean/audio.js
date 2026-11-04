@@ -4,7 +4,9 @@
  *  - bølgeskvulp ved overflaten og en lav dur i dypet,
  *  - etterklang («rom») som er sterkest ved vraket og korallrevet,
  *  - bobler fra ubåten, og
- *  - ekte dyrelyder (sounds/ocean/) med retning og avstand, og fjern hvalsang.
+ *  - ekte dyrelyder (sounds/ocean/) med retning og avstand, og fjern hvalsang, og
+ *  - rolig bakgrunnsmusikk som lages mens den spilles: lange, myke akkorder og
+ *    glassklare toner her og der (ingen lydfiler, så den blir aldri lik to ganger).
  */
 (function () {
   'use strict';
@@ -14,6 +16,9 @@
   let nodes = null;
   const buffers = new Map();
   let master = 1;
+  let musicOn = true;
+  let music = null;
+  let musicDepth = 0;
 
   function noiseBuffer(c, seconds) {
     const b = c.createBuffer(1, c.sampleRate * seconds, c.sampleRate);
@@ -103,10 +108,139 @@
     lfo.start();
     nodes = { out, reverb, wet, sea, seaFilter, seaGain, waves, waveLevel, lfo, droneGain, drones };
     out.gain.setTargetAtTime(Sound.isMuted() ? 0 : master, ctx.currentTime, 0.8);
+    if (musicOn) startMusic();
+  }
+
+  // ---------- Musikk ----------
+  const midi = (n) => 440 * Math.pow(2, (n - 69) / 12);
+  // D-moll-aktige akkorder som glir over i hverandre: Dm9, B♭maj7, Fmaj9, C(add9).
+  const CHORDS = [
+    [38, 57, 62, 65, 69, 76],
+    [34, 53, 58, 62, 65, 69],
+    [41, 57, 60, 64, 67, 72],
+    [36, 55, 60, 62, 67, 74],
+  ];
+  const BELLS = [62, 65, 67, 69, 72, 74, 77, 79, 81]; // D-moll pentaton
+
+  function startMusic() {
+    if (!nodes || music) return;
+    const bus = ctx.createGain();
+    bus.gain.value = 0;
+    const tone = ctx.createBiquadFilter();
+    tone.type = 'lowpass';
+    tone.frequency.value = 2400;
+    const send = ctx.createGain();
+    send.gain.value = 0.9;
+    // Musikken er skrudd godt opp, så en kompressor tar toppene når akkordene overlapper.
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18;
+    comp.ratio.value = 4;
+    comp.attack.value = 0.05;
+    comp.release.value = 0.6;
+    bus.connect(tone).connect(comp).connect(nodes.out);
+    comp.connect(send).connect(nodes.reverb);
+    bus.gain.setTargetAtTime(1.3, ctx.currentTime, 3);
+    music = { bus, tone, chord: 0, timers: [], voices: [] };
+    nextChord();
+    scheduleBell(3);
+  }
+
+  function pad(freq, start, dur, level) {
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(level, start + 5);
+    g.gain.setValueAtTime(level, start + dur - 6);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    const p = ctx.createStereoPanner();
+    p.pan.value = Math.random() * 0.8 - 0.4;
+    g.connect(p).connect(music.bus);
+    const oscs = [['sine', 0], ['triangle', -7], ['sine', 6]].map(([type, cents]) => {
+      const o = ctx.createOscillator();
+      o.type = type;
+      o.frequency.value = freq;
+      o.detune.value = cents;
+      o.connect(g);
+      o.start(start);
+      o.stop(start + dur + 0.1);
+      return o;
+    });
+    return oscs;
+  }
+
+  function nextChord() {
+    if (!music) return;
+    const now = ctx.currentTime;
+    const chord = CHORDS[music.chord % CHORDS.length];
+    music.chord++;
+    const dur = 20;
+    chord.forEach((n, i) => {
+      // Dypere i havet: musikken legger seg lavere.
+      const shift = musicDepth > 400 ? -12 : 0;
+      pad(midi(n + (i ? shift : 0)), now, dur, i === 0 ? 0.1 : 0.045);
+    });
+    music.timers.push(setTimeout(nextChord, (dur - 6) * 1000));
+  }
+
+  function scheduleBell(delay) {
+    if (!music) return;
+    music.timers.push(setTimeout(() => {
+      if (!music) return;
+      if (!Sound.isMuted()) bell();
+      const deep = musicDepth > 400;
+      scheduleBell((deep ? 5 : 3) + Math.random() * (deep ? 9 : 6));
+    }, delay * 1000));
+  }
+
+  function bell() {
+    const now = ctx.currentTime;
+    const n = BELLS[Math.floor(Math.random() * BELLS.length)] - (musicDepth > 400 ? 12 : 0);
+    const p = ctx.createStereoPanner();
+    p.pan.value = Math.random() * 1.4 - 0.7;
+    p.connect(music.bus);
+    // Grunntone og en «glass»-overtone.
+    [[1, 0.14], [2.76, 0.03], [5.4, 0.01]].forEach(([ratio, level]) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.frequency.value = midi(n) * ratio;
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(level, now + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 4.5 / ratio + 1);
+      o.connect(g).connect(p);
+      o.start(now);
+      o.stop(now + 6);
+    });
+    // Av og til et ekko av samme tone litt senere.
+    if (Math.random() < 0.35) {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.frequency.value = midi(n + 12);
+      g.gain.setValueAtTime(0.0001, now + 0.6);
+      g.gain.exponentialRampToValueAtTime(0.045, now + 0.62);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 3.5);
+      o.connect(g).connect(p);
+      o.start(now + 0.6);
+      o.stop(now + 4);
+    }
+  }
+
+  function stopMusic() {
+    if (!music) return;
+    const m = music;
+    music = null;
+    m.timers.forEach(clearTimeout);
+    m.bus.gain.setTargetAtTime(0, ctx.currentTime, 0.8);
+    setTimeout(() => { try { m.bus.disconnect(); } catch (e) { /* ferdig */ } }, 5000);
+  }
+
+  function setMusic(on) {
+    musicOn = !!on;
+    if (musicOn) startMusic();
+    else stopMusic();
   }
 
   function stop() {
     if (!nodes) return;
+    stopMusic();
     const n = nodes;
     nodes = null;
     n.out.gain.setTargetAtTime(0, ctx.currentTime, 0.3);
@@ -128,6 +262,8 @@
   function update(depth, room) {
     if (!nodes) return;
     const now = ctx.currentTime;
+    musicDepth = depth;
+    if (music) music.tone.frequency.setTargetAtTime(700 + 2200 * Math.exp(-depth / 250), now, 2);
     const muted = Sound.isMuted();
     nodes.out.gain.setTargetAtTime(muted ? 0 : master, now, 0.4);
     // Jo dypere, jo mørkere og dovere sus.
@@ -234,5 +370,5 @@
     ['knolhval.mp3', 'spekkhogger.mp3'].forEach((f) => load(f).catch(() => {}));
   }
 
-  window.PaizonOceanAudio = { start, stop, update, bubble, chime, animal, fadeTo, preload, resetMaster: () => { master = 1; } };
+  window.PaizonOceanAudio = { start, stop, update, bubble, chime, animal, fadeTo, preload, setMusic, get musicPlaying() { return !!music; }, resetMaster: () => { master = 1; } };
 })();

@@ -68,6 +68,21 @@
           <span class="game-name">Havet</span>
           <span class="game-desc">Dykk ned i Norskehavet</span>
         </button>
+        <button class="game-card feature" data-go="forest-setup" style="--card: #2e6b34">
+          <span class="game-emoji" aria-hidden="true">🌲</span>
+          <span class="game-name">Skogen</span>
+          <span class="game-desc">Gå på tur – dag og natt, sommer og vinter</span>
+        </button>
+        <button class="game-card feature space-card" data-go="space-setup" style="--card: #1b1f4a">
+          <span class="game-emoji" aria-hidden="true">🚀</span>
+          <span class="game-name">Rommet <small class="proto-badge">prøveversjon</small></span>
+          <span class="game-desc">Skyt opp en rakett og fly til Månen</span>
+        </button>
+        <button class="game-card feature" data-go="sky-setup" style="--card: #3a7bc8">
+          <span class="game-emoji" aria-hidden="true">🦅</span>
+          <span class="game-name">Himmelen</span>
+          <span class="game-desc">Fly som en fugl over hav og fjell</span>
+        </button>
         <button class="game-card" data-go="domino-setup" style="--card: #c0392b">
           <span class="game-emoji" aria-hidden="true">🁢</span>
           <span class="game-name">Domino</span>
@@ -562,7 +577,7 @@
           <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
           <h2 id="ocean-setup-title">🐋 Havet</h2>
         </div>
-        <p class="muted">Kjør ubåten fra overflaten og helt ned til dyphavet i Norskehavet. Dra med fingeren for å kjøre, og trykk på dyrene.</p>
+        <p class="muted">Kjør ubåten fra overflaten og helt ned til dyphavet i Norskehavet. Dra med fingeren for å kjøre, trykk på dyrene, og svøm inn i grotter og vrak. Knip med to fingre for å se mer av havet.</p>
         <div class="mode-grid">
           <button class="mode-card" data-ocean="lar">
             <span class="mode-emoji" aria-hidden="true">🎓</span>
@@ -584,6 +599,10 @@
         <div class="choice-row" data-game="ocean" data-key="sleep">
           <button data-value="0">Av</button><button data-value="10">10 min</button><button data-value="20">20 min</button><button data-value="30">30 min</button>
         </div>
+        <p class="field-label">Musikk</p>
+        <div class="choice-row" data-game="ocean" data-key="music">
+          <button data-value="1">🎵 På</button><button data-value="0">Av</button>
+        </div>
         <p class="field-help">Dyrelydene til knølhval og spekkhogger er ekte undervannsopptak (DCLDE 2027 / NOAA, CC BY-SA 4.0).</p>
       </div>
     </section>
@@ -596,6 +615,7 @@
           <span aria-hidden="true">🏠</span>
         </button>
         <p id="ocean-mission" class="ocean-mission" aria-live="polite" hidden></p>
+        <button id="ocean-music-btn" class="icon-btn" aria-label="Musikk av eller på" title="Musikk">🎵</button>
         <button id="ocean-album-btn" class="icon-btn" aria-label="Fotobok" title="Fotobok">📖</button>
       </div>
       <div id="ocean-world" class="sim-world ocean-world">
@@ -608,6 +628,34 @@
           <div class="ocean-readout"><strong id="ocean-depth">0 m</strong><span id="ocean-zone">Overflaten</span></div>
         </div>
         <div id="ocean-banner" class="ocean-banner" aria-live="polite"></div>
+        <canvas id="ocean-mini" class="ocean-mini" aria-label="Kart over havet – trykk for å se hele kartet" role="button"></canvas>
+
+        <div id="ocean-map" class="ocean-map" role="dialog" aria-label="Kart" hidden>
+          <div class="ocean-album-head">
+            <h3>🗺️ Kart over havet</h3>
+            <button id="ocean-map-close" class="btn small ghost">✕ Lukk</button>
+          </div>
+          <p class="ocean-map-help">Trykk et sted på kartet, så kjører ubåten dit.</p>
+          <canvas id="ocean-map-canvas" class="ocean-map-canvas"></canvas>
+        </div>
+
+        <div id="ocean-inside" class="ocean-inside" hidden>
+          <canvas id="ocean-inside-canvas" aria-label="Inne i grotta eller vraket – dra for å se deg rundt, trykk på det du ser"></canvas>
+          <div class="ocean-inside-top">
+            <button id="ocean-inside-exit" class="btn small">⬅ Svøm ut</button>
+            <p id="ocean-inside-name" class="ocean-inside-name"></p>
+            <p id="ocean-inside-count" class="ocean-inside-count"></p>
+          </div>
+          <div id="ocean-inside-info" class="ocean-inside-info" hidden>
+            <p id="ocean-inside-info-new" class="ocean-new" hidden>📸 Ny i fotoboka!</p>
+            <h3 id="ocean-inside-info-name"></h3>
+            <p id="ocean-inside-info-text"></p>
+            <div class="ocean-card-actions">
+              <button id="ocean-inside-read" class="btn small">🗣️ Les opp</button>
+              <button id="ocean-inside-info-close" class="btn small ghost">✕ Lukk</button>
+            </div>
+          </div>
+        </div>
 
         <div id="ocean-card" class="ocean-card" role="dialog" aria-labelledby="ocean-card-name" hidden>
           <canvas id="ocean-card-art" class="ocean-card-art" aria-hidden="true"></canvas>
@@ -637,6 +685,181 @@
           <p>🌙 God natt</p>
           <button id="ocean-wake" class="btn small ghost">Fortsett å se</button>
         </div>
+      </div>
+    </section>
+
+    <!-- ===================== SKOGEN: OPPSETT ===================== -->
+    <section id="screen-forest-setup" class="screen" aria-labelledby="forest-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="forest-setup-title">🌲 Skogen</h2>
+        </div>
+        <p class="muted">Gå på tur langs stien gjennom norsk skog. Trykk der du vil gå, trykk på dyr og planter, og kikk under steiner og inn i hule trær. Klokka og årstidknappen forandrer skogen.</p>
+        <div class="mode-grid">
+          <button class="mode-card" data-forest="lar">
+            <span class="mode-emoji" aria-hidden="true">🎓</span>
+            <span class="mode-name">Lær</span>
+            <span class="mode-desc">Dyr og planter presenterer seg. Små oppdrag underveis.</span>
+          </button>
+          <button class="mode-card" data-forest="oppdag">
+            <span class="mode-emoji" aria-hidden="true">🔭</span>
+            <span class="mode-name">Oppdag</span>
+            <span class="mode-desc">Fyll fotoboka – og let etter sjeldne dyr.</span>
+          </button>
+          <button class="mode-card" data-forest="rolig">
+            <span class="mode-emoji" aria-hidden="true">🌙</span>
+            <span class="mode-name">Rolig</span>
+            <span class="mode-desc">Ingen tekst. Oppdageren går rolig av seg selv.</span>
+          </button>
+        </div>
+        <p class="field-label">Årstid</p>
+        <div class="choice-row" data-game="forest" data-key="season">
+          <button data-value="na">Som nå</button><button data-value="var">🌸 Vår</button><button data-value="sommer">🌿 Sommer</button><button data-value="host">🍂 Høst</button><button data-value="vinter">❄️ Vinter</button>
+        </div>
+        <p class="field-label">Tid på døgnet</p>
+        <div class="choice-row" data-game="forest" data-key="time">
+          <button data-value="morgen">🌅 Morgen</button><button data-value="dag">☀️ Dag</button><button data-value="kveld">🌇 Kveld</button><button data-value="natt">🌙 Natt</button>
+        </div>
+        <p class="field-label">Musikk</p>
+        <div class="choice-row" data-game="forest" data-key="music">
+          <button data-value="1">🎵 På</button><button data-value="0">Av</button>
+        </div>
+        <p class="field-label">Sovetimer i Rolig</p>
+        <div class="choice-row" data-game="forest" data-key="sleep">
+          <button data-value="0">Av</button><button data-value="10">10 min</button><button data-value="20">20 min</button><button data-value="30">30 min</button>
+        </div>
+        <p class="field-help">Fuglesang, vind og musikk lages i appen mens den spilles.</p>
+      </div>
+    </section>
+
+    <!-- ===================== SKOGEN: SPILL ===================== -->
+    <section id="screen-forest" class="screen game-screen fullscreen-game" aria-label="Skogen">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="forest-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <p id="forest-mission" class="ocean-mission" aria-live="polite" hidden></p>
+        <button id="forest-time-btn" class="icon-btn" aria-label="Tid på døgnet" title="Tid på døgnet">☀️</button>
+        <button id="forest-season-btn" class="icon-btn" aria-label="Årstid" title="Årstid">🌿</button>
+        <button id="forest-listen-btn" class="icon-btn" aria-label="Lytt – hvem synger?" title="Lytt">👂</button>
+        <button id="forest-music-btn" class="icon-btn" aria-label="Musikk av eller på" title="Musikk">🎵</button>
+        <button id="forest-album-btn" class="icon-btn" aria-label="Fotobok" title="Fotobok">📖</button>
+      </div>
+      <div id="forest-world" class="sim-world forest-world">
+        <canvas id="forest-canvas" aria-label="Skogen – trykk der du vil gå, trykk på dyrene"></canvas>
+      </div>
+    </section>
+
+    <!-- ===================== HIMMELEN: OPPSETT ===================== -->
+    <section id="screen-sky-setup" class="screen" aria-labelledby="sky-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="sky-setup-title">🦅 Himmelen</h2>
+        </div>
+        <p class="muted">Fly som en fugl – fra hagen og hustakene, over skogen og fjellet, opp gjennom skyene og helt opp der flyene flyr. Dra med fingeren for å fly.</p>
+        <div class="mode-grid">
+          <button class="mode-card" data-sky="lar">
+            <span class="mode-emoji" aria-hidden="true">🎓</span>
+            <span class="mode-name">Lær</span>
+            <span class="mode-desc">Fugler og vær presenterer seg. Små oppdrag underveis.</span>
+          </button>
+          <button class="mode-card" data-sky="oppdag">
+            <span class="mode-emoji" aria-hidden="true">🔭</span>
+            <span class="mode-name">Oppdag</span>
+            <span class="mode-desc">Fyll fotoboka – og finn sjeldne fugler.</span>
+          </button>
+          <button class="mode-card" data-sky="rolig">
+            <span class="mode-emoji" aria-hidden="true">🌙</span>
+            <span class="mode-name">Rolig</span>
+            <span class="mode-desc">Ligg i gresset og se skyene som blir til dyr.</span>
+          </button>
+        </div>
+        <p class="field-label">Fugl</p>
+        <div class="choice-row" data-game="sky" data-key="bird">
+          <button data-value="make">Måke – glir på vinden</button><button data-value="orn">Ørn – stiger på varm luft</button><button data-value="spurv">Spurv – flakser fort</button>
+        </div>
+        <p class="field-label">Vær</p>
+        <div class="choice-row" data-game="sky" data-key="weather">
+          <button data-value="sol">☀️ Sol</button><button data-value="skyer">⛅ Skyer og regn</button><button data-value="natt">🌌 Natt med nordlys</button>
+        </div>
+        <p class="field-label">Musikk</p>
+        <div class="choice-row" data-game="sky" data-key="music">
+          <button data-value="1">🎵 På</button><button data-value="0">Av</button>
+        </div>
+        <p class="field-label">Sovetimer i Rolig</p>
+        <div class="choice-row" data-game="sky" data-key="sleep">
+          <button data-value="0">Av</button><button data-value="10">10 min</button><button data-value="20">20 min</button><button data-value="30">30 min</button>
+        </div>
+        <p class="field-help">Fuglesang, vind og musikk lages i appen mens den spilles.</p>
+      </div>
+    </section>
+
+    <!-- ===================== HIMMELEN: SPILL ===================== -->
+    <section id="screen-sky" class="screen game-screen fullscreen-game" aria-label="Himmelen">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="sky-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <p id="sky-mission" class="ocean-mission" aria-live="polite" hidden></p>
+        <button id="sky-weather-btn" class="icon-btn" aria-label="Vær" title="Vær">☀️</button>
+        <button id="sky-listen-btn" class="icon-btn" aria-label="Lytt – hvem synger?" title="Lytt">👂</button>
+        <button id="sky-music-btn" class="icon-btn" aria-label="Musikk av eller på" title="Musikk">🎵</button>
+        <button id="sky-album-btn" class="icon-btn" aria-label="Fotobok" title="Fotobok">📖</button>
+      </div>
+      <div id="sky-world" class="sim-world sky-world">
+        <canvas id="sky-canvas" aria-label="Himmelen – dra for å fly, trykk på fugler og vær"></canvas>
+        <div class="ocean-hud" aria-hidden="true">
+          <div id="sky-meter" class="ocean-meter sky-meter">
+            <span class="band s5"></span><span class="band s4"></span><span class="band s3"></span><span class="band s2"></span><span class="band s1"></span>
+            <span id="sky-meter-dot" class="dot-sub">🐦</span>
+          </div>
+          <div class="ocean-readout"><strong id="sky-alt">0 m</strong><span id="sky-zone">Hagen</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== ROMMET (PRØVEVERSJON) ===================== -->
+    <section id="screen-space-setup" class="screen" aria-labelledby="space-setup-title">
+      <div class="panel">
+        <div class="panel-head">
+          <button class="icon-btn" data-go="home" aria-label="Tilbake">←</button>
+          <h2 id="space-setup-title">🚀 Rommet <small class="proto-badge">prøveversjon</small></h2>
+        </div>
+        <p class="muted">To prøveversjoner av det samme øyeblikket: oppskytingen, bane rundt jorda, turen til Månen og landingen. Prøv begge og si hvilken du liker best. 🎧 Bruk gjerne hodetelefoner – lyden er en stor del av opplevelsen.</p>
+        <div class="mode-grid space-modes">
+          <button class="mode-card" data-space="2d">
+            <span class="mode-emoji" aria-hidden="true">✂️</span>
+            <span class="mode-name">2D – papirteater</span>
+            <span class="mode-desc">Papirklipp foran lysende himmel og planeter. Zoomer ut i ett strekk og viser de ekte avstandene.</span>
+          </button>
+          <button class="mode-card" data-space="3d">
+            <span class="mode-emoji" aria-hidden="true">🧊</span>
+            <span class="mode-name">3D – papirmodeller i ekte lys</span>
+            <span class="mode-desc">Kameraet sveiper som i en film: opp gjennom skyene, rundt jorda og ned på Månen.</span>
+          </button>
+        </div>
+        <p class="field-help">3D krever mer av telefonen. Rister og vibrerer under oppskytingen.</p>
+      </div>
+    </section>
+
+    <section id="screen-space" class="screen game-screen fullscreen-game" aria-label="Rommet">
+      <div class="game-top">
+        <button class="icon-btn hold-btn" data-exit="space-setup" aria-label="Hold inne for å avslutte">
+          <svg class="hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>
+          <span aria-hidden="true">🏠</span>
+        </button>
+        <p id="space-readout" class="space-readout" aria-live="polite"></p>
+      </div>
+      <div id="space-world" class="sim-world space-world">
+        <p id="space-count" class="space-count" aria-hidden="true"></p>
+        <div id="space-radio" class="space-radio" hidden><span aria-hidden="true">📻</span><p id="space-radio-text"></p></div>
+        <button id="space-ff" class="space-ff" hidden>⏩ Hold for å fly fortere</button>
+        <button id="space-action" class="space-action" hidden></button>
+        <p id="space-loading" class="space-loading" hidden></p>
       </div>
     </section>
 
@@ -685,8 +908,26 @@
   <script src="js/games/liquid.js"></script>
   <script src="js/ocean/data.js"></script>
   <script src="js/ocean/art.js"></script>
+  <script src="js/ocean/inside.js"></script>
   <script src="js/ocean/audio.js"></script>
   <script src="js/games/ocean.js"></script>
+  <script src="js/explore/kit.js"></script>
+  <script src="js/explore/creatures.js"></script>
+  <script src="js/forest/data.js"></script>
+  <script src="js/forest/art.js"></script>
+  <script src="js/games/forest.js"></script>
+  <script src="js/sky/data.js"></script>
+  <script src="js/sky/art.js"></script>
+  <script src="js/games/sky.js"></script>
+  <script src="js/papir/core.js"></script>
+  <script src="js/papir/fish.js"></script>
+  <script src="js/papir/critters.js"></script>
+  <script src="js/papir/land.js"></script>
+  <script src="js/papir/apply.js"></script>
+  <script src="js/space/core.js"></script>
+  <script src="js/space/proto2d.js"></script>
+  <script src="js/space/proto3d.js"></script>
+  <script src="js/games/space.js"></script>
   <script src="js/physics-kit.js"></script>
   <script src="js/games/domino.js"></script>
   <script src="js/games/marble.js"></script>
