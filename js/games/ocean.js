@@ -395,6 +395,9 @@
     const d = D.depthAt(cam.y + 0.5);
     ctx.fillStyle = rgb(mix(waterColor(d), [0, 0, 0], 0.18), 0.55);
     ctx.fill();
+    ctx.strokeStyle = 'rgba(43,34,25,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
   }
 
   /** Dyr langt borte: små, blasse silhuetter som beveger seg saktere enn alt foran (parallakse). */
@@ -477,53 +480,26 @@
 
   function drawSeabed() {
     const path = seabedPath();
-    const yTop = sy(D.seabedAt(cam.x + W / (2 * S)) - 0.3);
-    const g = ctx.createLinearGradient(0, yTop, 0, H + S * 0.3);
     const d = D.depthAt(cam.y + 0.6);
-    const sand = mix(hex('#c9b98a'), hex('#3b3a33'), clamp(d / 300, 0, 1));
-    g.addColorStop(0, rgb(sand));
-    g.addColorStop(1, rgb(mix(sand, [10, 10, 10], 0.6)));
-    ctx.fillStyle = g;
-    ctx.fill(path);
-    // Sandrifler og korn.
-    const sandPat = ctx.createPattern(A.sandTile(128), 'repeat');
-    if (sandPat) {
-      sandPat.setTransform(new DOMMatrix().translate(-cam.x * S, -cam.y * S).scale(Math.max(0.5, S / 500)));
-      ctx.fillStyle = sandPat;
+    const sand = mix(hex('#c9b98a'), hex('#4a463a'), clamp(d / 300, 0, 1));
+    // Havbunnen er et flatt papirlag med blekkant og papirskygge (stil 4a).
+    const PP = window.PaizonPapir;
+    if (PP) PP.paperPath(ctx, path, rgb(sand), { sx: 2, sy: 3 });
+    else {
+      ctx.fillStyle = rgb(sand);
       ctx.fill(path);
     }
-    // Mørkere jo lenger ned i bunnen (bunnen er en skråning bort fra oss, ikke en vegg).
-    const ao = ctx.createLinearGradient(0, 0, 0, H);
-    ao.addColorStop(0, 'rgba(0,0,0,0)');
-    ao.addColorStop(1, 'rgba(0,0,0,0.25)');
-    ctx.fillStyle = ao;
-    ctx.fill(path);
-    // Lys kant der sola treffer bunnen.
-    ctx.beginPath();
-    for (let px = -10; px <= W + 10; px += 6) {
-      const yy = sy(D.seabedAt(cam.x + px / S));
-      if (px === -10) ctx.moveTo(px, yy);
-      else ctx.lineTo(px, yy);
-    }
-    ctx.strokeStyle = `rgba(255,248,220,${0.08 + 0.3 * D.lightAt(d)})`;
-    ctx.lineWidth = 2;
-    ctx.stroke();
     // Steiner.
     for (const r of rocks) {
       const x = sx(r.x);
       if (x < -S * 0.2 || x > W + S * 0.2) continue;
       const y = sy(D.seabedAt(r.x));
       const R = r.r * S;
-      const tone = mix(hex('#6d6a62'), hex('#3a3934'), r.tone);
-      ctx.fillStyle = (() => {
-        const rg = ctx.createRadialGradient(x - R * 0.3, y - R * 0.5, R * 0.1, x, y, R * 1.1);
-        rg.addColorStop(0, rgb(mix(tone, [255, 255, 255], 0.25)));
-        rg.addColorStop(1, rgb(mix(tone, [0, 0, 0], 0.4)));
-        return rg;
-      })();
-      ctx.beginPath();
-      ctx.ellipse(x, y, R, R * r.flat, 0, Math.PI, Math.PI * 2);
-      ctx.fill();
+      const tone = mix(hex('#7d796f'), hex('#4a4842'), r.tone);
+      const st = new Path2D();
+      st.ellipse(x, y, R, R * r.flat, 0, Math.PI, Math.PI * 2);
+      st.closePath();
+      if (PP) PP.paperPath(ctx, st, rgb(tone), { sx: 1.5, sy: 2, lw: 1.3 });
     }
     // Skjell, småstein og tangtuer.
     for (const det of details) {
@@ -583,7 +559,8 @@
         if (a.sp.place.type === 'water') ctx.rotate(a.pitch * Math.sign(f));
         ctx.scale(f, 1);
       }
-      if (a.sp.place.type === 'bottom' && k !== 'coral' && k !== 'wreck') ctx.translate(0, -L * (k === 'crab' ? 0.2 : k === 'urchin' ? 0 : 0.08));
+      // De gamle tegningene hadde midten i origo og måtte løftes; papirdyrene står med føttene i origo.
+      if (!A.PAPIR && a.sp.place.type === 'bottom' && k !== 'coral' && k !== 'wreck') ctx.translate(0, -L * (k === 'crab' ? 0.2 : k === 'urchin' ? 0 : 0.08));
       art(ctx, L * scale, a.swim + ph);
       ctx.restore();
     };
@@ -653,6 +630,7 @@
    * kant under. Kantene finnes ved å trekke laget fra en forskjøvet kopi av seg selv.
    */
   function shadeCreatures() {
+    if (A.PAPIR) return; // papirdyrene har allerede kontur og skygge
     const depth = D.depthAt(cam.y + (H / S) * 0.5);
     const light = D.lightAt(depth);
     const k = Math.max(2, Math.round(2.2 * dpr));
@@ -1001,6 +979,8 @@
     drawSub();
     drawSnow(dt);
     drawSurface();
+    // Svak papirfiber over hele bildet, så også vannet ser ut som papir.
+    if (window.PaizonPapir) window.PaizonPapir.grainOverlay(ctx, W, H, 0.3);
     drawDarkness();
     drawGlows(vis);
     drawBokeh();
@@ -1321,7 +1301,7 @@
   function drawCardArt(sp) {
     const c = $('#ocean-card-art');
     const cx = c.getContext('2d');
-    const r = c.getBoundingClientRect();
+    const r = { width: c.offsetWidth || c.getBoundingClientRect().width, height: c.offsetHeight || c.getBoundingClientRect().height };
     const scale = Math.min(2, window.devicePixelRatio || 1);
     c.width = Math.max(10, r.width * scale);
     c.height = Math.max(10, r.height * scale);
@@ -1340,17 +1320,12 @@
       bg.addColorStop(1, rgb(mix(zc, [0, 0, 0], 0.35)));
       cx.fillStyle = bg;
       cx.fillRect(0, 0, w, h);
-      cx.save();
-      const jelly = isJelly(sp.kind);
-      const big = sp.kind === 'lionsmane';
-      const L = jelly ? h * (big ? 0.28 : 0.45) : sp.kind === 'coral' || sp.kind === 'wreck' ? w * 0.75 : sp.kind === 'crab' || sp.kind === 'starfish' || sp.kind === 'urchin' ? Math.min(w, h) * 0.6 : w * 0.72;
-      cx.translate(w / 2, jelly ? h * (big ? 0.2 : 0.45) : sp.kind === 'coral' || sp.kind === 'wreck' ? h * 0.92 : h * 0.55);
-      art(cx, L, t);
-      if (glow) {
-        cx.globalCompositeOperation = 'lighter';
-        glow(cx, L, t);
-      }
-      cx.restore();
+      // Dyret skaleres så det alltid passer i rammen.
+      window.PaizonExplore.drawFitted(cx, w, h, `ocean-${sp.kind}`, (c2, L2) => art(c2, L2, t), 0.8, glow ? (c2, L2) => {
+        c2.globalCompositeOperation = 'lighter';
+        glow(c2, L2, t);
+        c2.globalCompositeOperation = 'source-over';
+      } : null);
       cardRaf = requestAnimationFrame(step);
     };
     step();
@@ -1393,12 +1368,7 @@
     const cx = c.getContext('2d');
     const w = c.width;
     const h = c.height;
-    const jelly = isJelly(sp.kind);
-    const L = jelly ? h * (sp.kind === 'lionsmane' ? 0.25 : 0.42) : sp.kind === 'coral' || sp.kind === 'wreck' ? w * 0.8 : w * 0.62;
-    cx.save();
-    cx.translate(w / 2, jelly ? h * (sp.kind === 'lionsmane' ? 0.22 : 0.5) : sp.kind === 'coral' || sp.kind === 'wreck' ? h * 0.92 : h * 0.55);
-    A.SPECIES_ART[sp.kind](cx, L, 1);
-    cx.restore();
+    window.PaizonExplore.drawFitted(cx, w, h, `ocean-${sp.kind}`, (c2, L2) => A.SPECIES_ART[sp.kind](c2, L2, 1), 0.86);
     if (!have) {
       // Ikke funnet ennå: bare silhuetten.
       cx.globalCompositeOperation = 'source-in';

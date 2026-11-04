@@ -331,5 +331,11 @@
     });
   }
 
-  window.PaizonSkyArt = { ART, cloud, house };
+  /** Tegn et hus med foten på (x, yBase). L = bredden. */
+  function drawHouse(ctx, x, yBase, L, variant, night) {
+    const img = house(Math.max(12, Math.round(L / 4) * 4), variant, night);
+    ctx.drawImage(img, x - img.width / 2, yBase - img.height);
+  }
+
+  window.PaizonSkyArt = { ART, cloud, house, drawHouse };
 })();

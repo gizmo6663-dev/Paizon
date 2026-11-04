@@ -310,14 +310,22 @@
   }
 
   function drawLand() {
+    const PP = window.PaizonPapir; // papirstilen lastes etter spillet
     const gy0 = sy(0);
     if (gy0 < -S * 6) return; // langt over bakken: ingenting å tegne
     const night = weather === 'natt';
     // Havet.
     const seaRight = sx(6);
     if (seaRight > 0) {
-      ctx.fillStyle = lin(ctx, 0, gy0, 0, gy0 + S * 0.4, [[0, night ? '#1a2e48' : '#3a8ab8'], [1, night ? '#0a1424' : '#1a4a6a']]);
+      // Havet: flatt papirlag med blekkant langs vannflata.
+      ctx.fillStyle = night ? '#1a2e48' : '#3f86ae';
       ctx.fillRect(0, gy0, seaRight, H - gy0 + 10);
+      ctx.strokeStyle = PP ? PP.INK : '#2b2219';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, gy0);
+      ctx.lineTo(seaRight, gy0);
+      ctx.stroke();
       ctx.strokeStyle = night ? 'rgba(180,200,255,0.25)' : 'rgba(255,255,255,0.5)';
       ctx.lineWidth = 1.2;
       for (let k = 0; k < 6; k++) {
@@ -336,12 +344,14 @@
     ctx.beginPath();
     ctx.rect(Math.max(0, seaRight), -10, W + 20, H + 20);
     ctx.clip();
-    const g = ctx.createLinearGradient(0, sy(D.uAt(1800)), 0, gy0 + S * 0.3);
-    g.addColorStop(0, night ? '#3a4050' : '#8a8a86');
-    g.addColorStop(0.55, night ? '#2a3428' : '#6a7a52');
-    g.addColorStop(1, night ? '#1a2418' : '#4a6a32');
-    ctx.fillStyle = g;
-    ctx.fill(p);
+    // Bakken er et flatt papirlag; over tregrensa er fjellet grått berg.
+    if (PP) PP.paperPath(ctx, p, night ? '#2a3428' : '#6a7a4a', { sx: 2, sy: 3 });
+    ctx.save();
+    ctx.clip(p);
+    ctx.fillStyle = night ? '#3a4050' : '#8c8a80';
+    const rockY = sy(D.uAt(450));
+    ctx.fillRect(Math.max(0, sx(23.5)), -10, W + 10, rockY + 10);
+    ctx.restore();
     // Snø på fjelltoppene.
     ctx.save();
     ctx.clip(p);
@@ -355,8 +365,11 @@
     }
     ctx.lineTo(W + 10, -10);
     ctx.closePath();
-    ctx.fillStyle = night ? '#b8c2d6' : lin(ctx, 0, sy(D.uAt(1900)), 0, sy(D.uAt(1200)), [[0, '#ffffff'], [1, '#dfe6ee']]);
+    ctx.fillStyle = night ? '#b8c2d6' : '#f4f6f8';
     ctx.fill();
+    ctx.strokeStyle = PP ? PP.INK : '#2b2219';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
     // Skrå furer i fjellsida.
     const r = seeded(13);
     ctx.strokeStyle = night ? 'rgba(0,0,0,0.2)' : 'rgba(70,66,60,0.16)';
@@ -372,10 +385,12 @@
       ctx.lineTo(x + len * (wx < 29 || (wx > 32 && wx < 35.5) ? -0.6 : 0.6), y + len);
       ctx.stroke();
     }
-    ctx.fillStyle = lin(ctx, sx(24), 0, sx(40), 0, [[0, 'rgba(255,250,230,0.08)'], [0.5, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,30,0.15)']]);
-    ctx.fillRect(0, -10, W, H + 20);
     ctx.restore();
     ctx.restore();
+    // Blekkant rundt hele landet (over snøen og berget).
+    ctx.strokeStyle = PP ? PP.INK : '#2b2219';
+    ctx.lineWidth = 1.5;
+    ctx.stroke(p);
     // Varm luft som stiger (svak, flimrende søyle).
     if (weather !== 'natt') {
       for (const t of THERMALS) {
@@ -408,8 +423,7 @@
       const x = sx(h.x);
       const L = h.s * S;
       if (x < -L || x > W + L) continue;
-      const img = SA.house(Math.max(12, Math.round(L / 4) * 4), h.v, night);
-      ctx.drawImage(img, x - img.width / 2, sy(gU(h.x)) - img.height + 2);
+      SA.drawHouse(ctx, x, sy(gU(h.x)) + 2, L, h.v, night);
     }
     // Snora til dragen.
     const kite = things.find((t) => t.sp.key === 'drage');
@@ -669,6 +683,7 @@
       drawThings(false);
       drawFlocks();
       drawMe();
+      if (window.PaizonPapir) window.PaizonPapir.grainOverlay(ctx, W, H, 0.3);
       drawWeatherOverlay();
     }
     const dim = sleep.tick();

@@ -100,12 +100,13 @@
     return box;
   }
   /** Tegn draw(ctx, L) slik at den fyller rammen (w × h) med litt luft rundt. */
-  function drawFitted(ctx, w, h, key, draw, fill) {
+  function drawFitted(ctx, w, h, key, draw, fill, after) {
     const box = measure(key, draw);
     const k = Math.min((w * (fill || 0.82)) / box.w, (h * (fill || 0.82)) / box.h);
     ctx.save();
     ctx.translate(w / 2 - (box.x + box.w / 2) * k, h / 2 - (box.y + box.h / 2) * k);
     draw(ctx, 100 * k);
+    if (after) after(ctx, 100 * k); // f.eks. lys i mørket – tegnes oppå, men teller ikke med i størrelsen
     ctx.restore();
   }
 
@@ -154,7 +155,8 @@
         box.querySelector('.ex-sound').hidden = !o.sound;
         box.hidden = false;
         window.PaizonSound.flip();
-        const r = art.getBoundingClientRect();
+        // Mål uten kortets innhopp-animasjon (den skalerer kortet ned et øyeblikk).
+        const r = { width: art.offsetWidth || art.getBoundingClientRect().width, height: art.offsetHeight || art.getBoundingClientRect().height };
         const sc = Math.min(2, window.devicePixelRatio || 1);
         art.width = Math.max(10, r.width * sc);
         art.height = Math.max(10, r.height * sc);

@@ -112,6 +112,20 @@ I Rolig («Skykiker») ligger man i gresset og ser skyene drive forbi – av og 
 
 Fuglesang, dyrelyder, vind og musikk i Skogen og Himmelen lages i appen (Web Audio), ikke av opptak.
 
+### 🎨 Papirdyr (stil 4a)
+Alle dyrene i Havet, Skogen og Himmelen tegnes i stil 4a fra designhandoffen: papirklipp med
+flate farger, én sammenhengende mørk kontur rundt hele dyret, papirfiber og én skygge (lys fra
+øvre høyre). Dyrene tegnes i kode ut fra en artsbeskrivelse og en felles rigg per dyretype:
+- **Fisk** (og hval og sel): én svømmebølge gjennom hele kroppen, så finner og mønster følger med.
+- **Firbeinte**: rør-bein med gangesyklus, pukkelkropp, og hopp for hare og ekorn.
+- **Fugler**: vinger i perspektiv når de flyr, og egen positur når de sitter.
+- **Havliv og småkryp** uten rigg: maneter, sjøstjerner, krepsdyr, blekksprut, sopp og bær.
+
+En ny art er bare et nytt dataobjekt i `js/papir/`. Kontur, fiber og skygge legges på ett sted
+(`js/papir/core.js`), og ferdige utklipp lagres per art, størrelse og bilde i bevegelsen, så
+stimer og flokker gjenbruker dem. Terrenget (havbunn, tare, fjell, trær, bakke og hus) er laget
+i samme stil: flate papirlag med blekkant og papirskygge.
+
 ### Felles
 - Lyd kan slås av, og alt leses opp med norsk talesyntese når enheten har det
 - 🏠-knappen i spillene må holdes inne i ett sekund, så barnet ikke avslutter ved et uhell
@@ -180,6 +194,7 @@ js/core.js          Felles skall: skjermer, lagring, innstillinger, ferdigskjerm
 js/games/*.js       Ett skript per spill (spell, count, memory, shapes, build, liquid, domino, marble, ocean, forest, sky)
 js/explore/         Felles for Skogen og Himmelen: faktakort, fotobok, lyd og musikk (kit.js) og dyretegninger
 js/forest/, js/sky/ Innhold (data.js) og kulisser (art.js) for Skogen og Himmelen
+js/papir/           Papirdyrene (stil 4a): utklipp og fiber (core), fisk, havliv og småkryp, firbeinte og fugler
 js/ocean/           Havet: data (arter, steder, soner, dybde), tegninger, innsiden av grotter og vrak, lyd og musikk
 js/physics-kit.js   Felles hjelpere for domino og kulebane (Matter.js-scene, tegning, nivå klart)
 js/fluid.js         Væskesimulatoren (testes med node --test)

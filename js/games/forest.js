@@ -12,6 +12,12 @@
   const FA = window.PaizonForestArt;
   const C = window.PaizonCreatures;
   const X = window.PaizonExplore;
+  // Papirstilen (lastes etter spillet, men finnes når det tegnes).
+  const PAP = {
+    INK: '#2b2219',
+    paperPath: (...a) => (window.PaizonPapir ? window.PaizonPapir.paperPath(...a) : null),
+    grain: (...a) => (window.PaizonPapir ? window.PaizonPapir.grainOverlay(...a) : null),
+  };
   const Sound = window.PaizonSound;
   const Speech = window.PaizonSpeech;
   const { $, $$ } = P;
@@ -323,18 +329,19 @@
   function drawDistance(sky) {
     // Fjell langt borte.
     const mcol = mixHex(sky.haze, '#4a5a6a', 0.35);
-    ctx.fillStyle = mcol;
-    ctx.beginPath();
-    ctx.moveTo(0, H);
+    // Fjellene er et flatt papirlag med blekkant (stil 4a).
+    const mp = new Path2D();
+    mp.moveTo(0, H);
     for (let px = 0; px <= W + 10; px += 10) {
       const wx = cam.x * 0.06 + px / S;
-      ctx.lineTo(px, H * (0.5 - 0.12 * (0.6 + 0.3 * Math.sin(wx * 1.7 + 1) + 0.1 * Math.sin(wx * 5.3))));
+      mp.lineTo(px, H * (0.5 - 0.12 * (0.6 + 0.3 * Math.sin(wx * 1.7 + 1) + 0.1 * Math.sin(wx * 5.3))));
     }
-    ctx.lineTo(W, H);
-    ctx.fill();
+    mp.lineTo(W, H);
+    mp.closePath();
+    PAP.paperPath(ctx, mp, mcol, { sx: 2, sy: 3 });
     if (season === 'vinter' || season === 'var') {
       // Snø på fjelltoppene.
-      ctx.fillStyle = 'rgba(245,248,252,0.7)';
+      ctx.fillStyle = '#f2f5f8';
       ctx.beginPath();
       for (let px = 0; px <= W + 10; px += 10) {
         const wx = cam.x * 0.06 + px / S;
@@ -347,7 +354,11 @@
         const y = H * (0.5 - 0.12 * (0.6 + 0.3 * Math.sin(wx * 1.7 + 1) + 0.1 * Math.sin(wx * 5.3)));
         ctx.lineTo(px, Math.min(y + H * 0.04, H * 0.44));
       }
+      ctx.closePath();
       ctx.fill();
+      ctx.strokeStyle = PAP.INK;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
     }
     // To rekker med skog langt borte: blassere jo lenger unna.
     const green = FA.PALETTE[season].spruce;
@@ -454,19 +465,14 @@
   function drawGround(sky) {
     const pal = FA.PALETTE[season];
     const p = groundPath();
-    const g = ctx.createLinearGradient(0, H * 0.75, 0, H);
-    g.addColorStop(0, shade(pal.moss, 0.05));
-    g.addColorStop(1, shade(pal.ground, -0.3));
-    ctx.fillStyle = g;
-    ctx.fill(p);
+    // Bakken og stien er flate papirlag med blekkant og skygge.
+    PAP.paperPath(ctx, p, shade(pal.moss, 0.02), { sx: 2, sy: 3 });
     drawPond(sky);
-    // Stien.
-    ctx.beginPath();
-    for (let px = -10; px <= W + 10; px += 8) ctx.lineTo(px, gy(cam.x + px / S) + S * 0.045);
-    for (let px = W + 10; px >= -10; px -= 8) ctx.lineTo(px, gy(cam.x + px / S) + S * 0.1);
-    ctx.closePath();
-    ctx.fillStyle = lin(ctx, 0, H * 0.82, 0, H * 0.92, [[0, shade(pal.path, 0.1)], [1, shade(pal.path, -0.15)]]);
-    ctx.fill();
+    const path = new Path2D();
+    for (let px = -10; px <= W + 10; px += 8) path.lineTo(px, gy(cam.x + px / S) + S * 0.045);
+    for (let px = W + 10; px >= -10; px -= 8) path.lineTo(px, gy(cam.x + px / S) + S * 0.1);
+    path.closePath();
+    PAP.paperPath(ctx, path, shade(pal.path, 0.02), { sx: 1.5, sy: 2 });
     // Detaljer: gress, steiner, bregner og blomster.
     for (const d of details) {
       const x = sx(d.x);
@@ -483,10 +489,10 @@
           ctx.stroke();
         }
       } else if (d.kind === 'stone') {
-        ctx.fillStyle = rad(ctx, x - s * 0.2, y - s * 0.3, 0, s, [[0, '#9a968c'], [1, '#55524a']]);
-        ctx.beginPath();
-        ctx.ellipse(x, y, s * 0.6, s * 0.35, 0, Math.PI, TAU);
-        ctx.fill();
+        const st = new Path2D();
+        st.ellipse(x, y, s * 0.6, s * 0.35, 0, Math.PI, TAU);
+        st.closePath();
+        PAP.paperPath(ctx, st, '#8a867c', { sx: 1, sy: 1.5, lw: 1.2 });
         if (season === 'vinter') {
           ctx.fillStyle = '#f4f8fb';
           ctx.beginPath();
@@ -626,10 +632,25 @@
         ctx.ellipse(0, 1, L * 0.4, L * 0.05, 0, 0, TAU);
         ctx.fill();
       }
+      // Dyr oppe i trærne sitter på en grein ut fra stammen.
+      if ((a.sp.place === 'tree' || a.sp.place === 'trunk') && a.tree && a.sp.kind !== 'spett') {
+        const tx = sx(a.tree.x) - x;
+        const reach = tx + Math.sign(-tx || 1) * L * 0.6;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#2b2219';
+        ctx.lineWidth = Math.max(4, L * 0.16) + 3;
+        ctx.beginPath();
+        ctx.moveTo(tx, L * 0.05);
+        ctx.lineTo(-reach * 0.15, 0);
+        ctx.stroke();
+        ctx.strokeStyle = '#6b5236';
+        ctx.lineWidth = Math.max(4, L * 0.16);
+        ctx.stroke();
+      }
       const f = Math.sign(a.face || 1) * Math.max(0.15, Math.abs(a.face));
       if (a.sp.kind !== 'sommerfugl' && a.sp.kind !== 'flaggermus') ctx.scale(f, 1);
       const pose = a.sp.place === 'air' ? 'fly' : 'perch';
-      art(ctx, L, time + a.phase, { gait: a.gait || 0, graze: a.state === 'graze' && !a.flee ? 1 : 0, winter: season === 'vinter', pose });
+      art(ctx, L, time + a.phase, { gait: a.gait || 0, graze: a.state === 'graze' && !a.flee ? 1 : 0, winter: season === 'vinter', pose, sit: a.sp.place === 'trunk' });
       ctx.restore();
       if (a.glowUntil > time) {
         const k = (a.glowUntil - time) / 1.5;
@@ -647,10 +668,11 @@
       const x = (t.x - cam.x * 1.35) * S + W * 0.35 * 0.35;
       const w = t.w * S;
       if (x < -w * 2 || x > W + w * 2) continue;
-      const col = t.type === 'bjork' ? ['#6a6660', '#c8c4bc'] : ['#2a2018', '#5a4632'];
-      ctx.fillStyle = lin(ctx, x - w / 2, 0, x + w / 2, 0, [[0, col[0]], [0.35, col[1]], [1, col[0]]]);
-      ctx.fillRect(x - w / 2, 0, w, H);
-      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      const col = t.type === 'bjork' ? '#d8d4ca' : '#4a3828';
+      const tr = new Path2D();
+      tr.rect(x - w / 2, -4, w, H + 8);
+      PAP.paperPath(ctx, tr, col, { sx: 3, sy: 0 });
+      ctx.strokeStyle = t.type === 'bjork' ? 'rgba(30,26,22,0.6)' : 'rgba(0,0,0,0.25)';
       ctx.lineWidth = 1.5;
       for (let k = 0; k < 8; k++) {
         ctx.beginPath();
@@ -817,6 +839,7 @@
     drawAnimals((a) => a.sp.place === 'air');
     drawParticles(dt);
     drawFrontTrunks();
+    PAP.grain(ctx, W, H, 0.32);
     drawLight(sky);
     const dim = sleep.tick();
     if (dim) {
