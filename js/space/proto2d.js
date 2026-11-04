@@ -537,10 +537,25 @@
       if (rowA > 0.05) {
         ctx.save();
         ctx.globalAlpha = rowA;
-        ctx.fillStyle = '#fff6d8';
+        const fs = Math.round(Math.max(16, H * 0.032));
+        ctx.font = `900 ${fs}px system-ui, sans-serif`;
         ctx.textAlign = 'center';
-        ctx.font = `900 ${Math.round(Math.max(16, H * 0.032))}px system-ui, sans-serif`;
-        ctx.fillText('Alle planetene får plass mellom jorda og Månen!', W / 2, H - 100);
+        ctx.textBaseline = 'middle';
+        const text = 'Alle planetene får plass mellom jorda og Månen!';
+        // Én linje når det er plass, ellers to (stående telefon).
+        const lines = ctx.measureText(text).width < W - 60 ? [text] : ['Alle planetene får plass', 'mellom jorda og Månen!'];
+        const tw = Math.max(...lines.map((l) => ctx.measureText(l).width));
+        const lh = fs * 1.25;
+        const cy = H - 118 - lh / 2 - (lines.length - 1) * lh; // over knappen nederst
+        // Mørk lapp bak, så teksten er lett å lese over planetnavnene.
+        ctx.fillStyle = 'rgba(10, 14, 30, 0.72)';
+        ctx.beginPath();
+        const box = [W / 2 - tw / 2 - 16, cy - lh / 2 - 8, tw + 32, lh * lines.length + 16];
+        if (ctx.roundRect) ctx.roundRect(...box, 14);
+        else ctx.rect(...box);
+        ctx.fill();
+        ctx.fillStyle = '#fff6d8';
+        lines.forEach((l, i) => ctx.fillText(l, W / 2, cy + i * lh));
         ctx.restore();
       }
 
